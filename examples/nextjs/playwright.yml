@@ -1,0 +1,15 @@
+name: Playwright E2E Tests
+
+on:
+  deployment_status:
+
+permissions:
+  contents: read
+  pull-requests: write
+  id-token: write
+
+jobs:
+  preview:
+    uses: DoctorDerek/DoctorDerekCICD/.github/workflows/playwright.yml@93e29ba0fcf1d35d8ff0040002816c36d763d966
+    with:
+      trusted-oidc: true
