@@ -1,0 +1,31 @@
+name: ESLint, Vitest, and XState Pipeline
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+  pull-requests: write
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  quality:
+    uses: DoctorDerek/DoctorDerekCICD/.github/workflows/eslint-vitest-xstate.yml@93e29ba0fcf1d35d8ff0040002816c36d763d966
+    with:
+      typecheck-command: pnpm typecheck
+      vitest-command: pnpm test:coverage --continue=dependencies-successful
+      coverage-files: apps/web/coverage/lcov.info,packages/calibration/coverage/lcov.info,packages/evaluation/coverage/lcov.info,packages/hints/coverage/lcov.info,packages/match/coverage/lcov.info,packages/match-presentation/coverage/lcov.info,packages/profile/coverage/lcov.info,packages/stockfish/coverage/lcov.info,packages/stockfish-native/coverage/lcov.info
+      coverage-artifact-paths: |
+        apps/*/coverage/
+        packages/*/coverage/
+      native-command: pnpm --filter @mapachess/mobile test:native:coverage
+    secrets:
+      CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
