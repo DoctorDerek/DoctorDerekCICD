@@ -67,6 +67,8 @@ Production Lighthouse waits for the matching main deployment, measures the expli
 
 ## Verification and limits
 
+This repository checks formatting, ESLint, TypeScript and the existing helper tests on PRs and main. Helper coverage is uploaded to Codecov using its own `CODECOV_TOKEN` repository secret. These self-checks do not deploy a website or run consumer application tests.
+
 The extracted capability code passes 45 existing tests across eight files on Node 24.18.0, pnpm 11.9.0, TypeScript 6.0.3 and Vitest 4.1.10. Formatting, ESLint and strict TypeScript pass. All three reusable workflows and their embedded JavaScript parse; all 18 shell blocks parse with Bash. The runner test executes shared code from a different working directory, preserving consumer-root independence. Lighthouse requires an explicit target instead of defaulting another repository to DoctorDerek.com.
 
 These checks do not prove hosted uploads, OIDC or Pages publication. The DoctorDerek.com pilot PR supplies hosted quality/XState evidence. Inspect a run's `referenced_workflows` to confirm which shared revision actually executed rather than inferring it from the event name. Pilot Preview run 34925498520 selected the pinned shared revision before merge; its first attempt legitimately skipped because deployment completed before PR creation. Rerunning that existing event after PR creation reuses the deployment. Production Lighthouse remains a normal post-merge verification boundary. No extra paid deployment is required solely to change that claim.
@@ -78,3 +80,7 @@ Keep application tests in consumers. Existing pure XState/Lighthouse capability 
 Change a capability once here, verify it, and review it. When helper source changes, commit that source first and update the central checkout SHA in the reusable workflows. Then update the complete examples to the new workflow SHA. Consumers take a small explicit revision bump; a shared merge does not silently change every project's deployed automation.
 
 A conforming consumer needs no PR. Differences outside the listed inputs require a specific incompatibility report and approval, not a local fork or an invented mechanism. No installer, published npm package, service or release bot is part of this repository.
+
+## License
+
+Copyright (c) 2026 Dr. Derek Austin, all rights reserved. See [LICENSE.txt](LICENSE.txt).
