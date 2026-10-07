@@ -12,9 +12,18 @@ on:
       trusted-oidc:
         type: boolean
         default: false
-      playwright-command:
+      prepare-command:
+        description: Optional application preparation before running the shared Playwright command
         type: string
-        default: pnpm exec playwright test
+        default: ""
+      job-timeout-minutes:
+        description: Maximum duration of the complete browser-test job
+        type: number
+        default: 75
+      suite-timeout-minutes:
+        description: Maximum Playwright suite duration; must be shorter than the job timeout
+        type: number
+        default: 60
       report-paths:
         type: string
         default: |
@@ -98,8 +107,26 @@ jobs:
     needs: preview-context
     if: needs.preview-context.outputs.pull-request-number != ''
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: ${{ inputs.job-timeout-minutes }}
     steps:
+      - name: Validate Playwright Timeouts
+        id: timeouts
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9
+        env:
+          JOB_TIMEOUT_MINUTES: ${{ inputs.job-timeout-minutes }}
+          SUITE_TIMEOUT_MINUTES: ${{ inputs.suite-timeout-minutes }}
+        with:
+          script: |
+            const jobMinutes = Number(process.env.JOB_TIMEOUT_MINUTES);
+            const suiteMinutes = Number(process.env.SUITE_TIMEOUT_MINUTES);
+            if (
+              !Number.isInteger(jobMinutes) || jobMinutes < 1 || jobMinutes > 360 ||
+              !Number.isInteger(suiteMinutes) || suiteMinutes < 1 || suiteMinutes >= jobMinutes
+            ) {
+              throw new Error('Playwright timeouts must be positive integer minutes, with suite < job <= 360.');
+            }
+            core.setOutput('suite-timeout-ms', suiteMinutes * 60_000);
+
       - name: Checkout Repository
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -121,6 +148,12 @@ jobs:
       - name: Install Playwright Browsers
         run: pnpm exec playwright install --with-deps
 
+      - name: Prepare Application for Playwright
+        if: inputs.prepare-command != ''
+        run: bash -e -o pipefail -c "$PREPARE_COMMAND"
+        env:
+          PREPARE_COMMAND: ${{ inputs.prepare-command }}
+
       - name: Get GitHub OIDC Token
         if: inputs.trusted-oidc
         id: github-oidc-token
@@ -135,8 +168,13 @@ jobs:
       - name: Run Playwright Tests and Capture Summary
         id: playwright
         run: |
+          playwright_args=(--reporter=line,html --global-timeout="$PLAYWRIGHT_SUITE_TIMEOUT_MS")
+          if [ "$PLAYWRIGHT_VERCEL_TRUSTED_OIDC" = "true" ]; then
+            playwright_args+=(--trace=off)
+          fi
+
           set +e
-          bash -o pipefail -c "$PLAYWRIGHT_COMMAND" 2>&1 | tee "$RUNNER_TEMP/playwright-output.txt"
+          pnpm exec playwright test "${playwright_args[@]}" 2>&1 | tee "$RUNNER_TEMP/playwright-output.txt"
           PLAYWRIGHT_EXIT_CODE=${PIPESTATUS[0]}
           set -e
 
@@ -144,8 +182,10 @@ jobs:
           echo "PLAYWRIGHT_OUTPUT_FILE=$RUNNER_TEMP/playwright-output.txt" >> "$GITHUB_ENV"
           exit "$PLAYWRIGHT_EXIT_CODE"
         env:
-          PLAYWRIGHT_COMMAND: ${{ inputs.playwright-command }}
+          PLAYWRIGHT_SUITE_TIMEOUT_MS: ${{ steps.timeouts.outputs.suite-timeout-ms }}
+          PLAYWRIGHT_HTML_OPEN: never
           PLAYWRIGHT_TEST_BASE_URL: ${{ needs.preview-context.outputs.preview-url }}
+          PLAYWRIGHT_VERCEL_TRUSTED_OIDC: ${{ inputs.trusted-oidc }}
           PLAYWRIGHT_VERCEL_TRUSTED_OIDC_TOKEN: ${{ steps.github-oidc-token.outputs.token }}
 
       - name: Upload Playwright Report
@@ -179,7 +219,7 @@ jobs:
             const qualityPosition = '**Quality check 3 of 3**';
             const summaryLines = cleanOutput
               .split(/\r?\n/)
-              .filter(line => /Running \d+ tests?|\d+ (passed|failed|flaky|skipped)|Error:/.test(line))
+              .filter(line => /Running \d+ tests?|\d+ (passed|failed|flaky|skipped|interrupted)|Error:|Timed out waiting/.test(line))
               .slice(-12);
             const fallbackLines = cleanOutput
               .split(/\r?\n/)
@@ -187,7 +227,7 @@ jobs:
               .slice(-12);
             const summary = (summaryLines.length > 0 ? summaryLines : fallbackLines).join('\n');
             const status = !Number.isInteger(exitCode)
-              ? '❌ **Playwright did not run; setup or browser installation failed.**'
+              ? '❌ **Playwright did not complete; inspect setup, preparation, and runner logs.**'
               : exitCode === 0
                 ? '✅ **Playwright completed successfully.**'
                 : '❌ **Playwright failed; inspect the retained report.**';
