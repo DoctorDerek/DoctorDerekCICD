@@ -2,7 +2,7 @@
 
 This is the configuration and maintenance reference for the shared workflows. See the [README](README.md) for the project overview.
 
-## Reviewed source
+## Source revisions
 
 The shared implementation was merged in [DoctorDerekCICD PR #2](https://github.com/DoctorDerek/DoctorDerekCICD/pull/2), followed by the [DoctorDerek.com pilot integration](https://github.com/DoctorDerek/DoctorDerek.com/pull/215).
 
@@ -12,12 +12,13 @@ The shared implementation was merged in [DoctorDerekCICD PR #2](https://github.c
 | Shared helper source                                                                                        | `f6ccad1da06de4dd8492cbf4b7e4a32e97737b57` |
 | Reusable workflows                                                                                          | `93e29ba0fcf1d35d8ff0040002816c36d763d966` |
 | Reviewed caller examples                                                                                    | `dbf880ada33888464713046132f2616879ea7925` |
+| Shared Playwright runner contract                                                                           | `0bcbfc0a2e2a8f210e3d445a92615f5701591f17` |
 
-The examples at that revision pin the workflow commit above. The workflows pin their shared helper checkout; consumers do not need a separate helper-version input. Retrieve examples from the reviewed commit rather than a moving branch, and retain the full workflow SHA in each caller.
+The first four commits record the initial integration. The Playwright contract below replaces that revision's full-command input; the current Playwright examples pin the implementation of the new contract. Existing consumers stay on their selected immutable revision until they explicitly adopt a reviewed update. The workflows pin their shared helper checkout; consumers do not need a separate helper-version input. Retain the full workflow SHA in each caller.
 
 ## Adopt the existing callers
 
-Copy the three files from the reviewed [Next.js examples](https://github.com/DoctorDerek/DoctorDerekCICD/tree/dbf880ada33888464713046132f2616879ea7925/examples/nextjs) or [Next.js + Expo examples](https://github.com/DoctorDerek/DoctorDerekCICD/tree/dbf880ada33888464713046132f2616879ea7925/examples/nextjs-expo) into the application repository’s `.github/workflows/`:
+Use the [Next.js examples](examples/nextjs/) or [Next.js + Expo examples](examples/nextjs-expo/) from the reviewed revision being adopted. Each caller pins its workflow implementation. Copy the applicable files into the application repository's `.github/workflows/`:
 
 - `eslint-vitest-xstate.yml`: application linting, types, tests, coverage, and XState PR visualization.
 - `playwright.yml`: browser tests after a successful matching Preview deployment.
@@ -27,20 +28,22 @@ The solo example contains DoctorDerek.com values; the monorepo example contains 
 
 ### Inputs
 
-| Input                     | Source of truth                                                        | Default                                                      |
-| ------------------------- | ---------------------------------------------------------------------- | ------------------------------------------------------------ |
-| `application-directory`   | Working directory for application test/typecheck commands              | `.`                                                          |
-| `node-version-file`       | Existing Node version file, workspace-relative                         | `.node-version`                                              |
-| `typecheck-command`       | Existing complete web/shared/native typecheck command                  | Required                                                     |
-| `vitest-command`          | Existing application coverage command, retaining failure-time coverage | `pnpm exec vitest run --coverage --coverage.reportOnFailure` |
-| `coverage-files`          | Actual LCOV files, comma-separated for multiple contributors           | `coverage/lcov.info`                                         |
-| `coverage-artifact-paths` | Actual coverage directories, newline-separated                         | `coverage/`                                                  |
-| `native-command`          | Existing native-renderer Jest coverage command                         | Empty; native job skipped                                    |
-| `native-coverage-files`   | Existing native LCOV path                                              | `coverage/native/lcov.info`                                  |
-| `playwright-command`      | Existing browser test command                                          | `pnpm exec playwright test`                                  |
-| `report-paths`            | HTML report and test-results directories, newline-separated            | `playwright-report/` and `test-results/`                     |
-| `trusted-oidc`            | Existing working Vercel Trusted Sources configuration                  | `false`                                                      |
-| `production-url`          | Canonical public Production URL                                        | Required                                                     |
+| Input                     | Source of truth                                                         | Default                                                      |
+| ------------------------- | ----------------------------------------------------------------------- | ------------------------------------------------------------ |
+| `application-directory`   | Working directory for application test/typecheck commands               | `.`                                                          |
+| `node-version-file`       | Existing Node version file, workspace-relative                          | `.node-version`                                              |
+| `typecheck-command`       | Existing complete web/shared/native typecheck command                   | Required                                                     |
+| `vitest-command`          | Existing application coverage command, retaining failure-time coverage  | `pnpm exec vitest run --coverage --coverage.reportOnFailure` |
+| `coverage-files`          | Actual LCOV files, comma-separated for multiple contributors            | `coverage/lcov.info`                                         |
+| `coverage-artifact-paths` | Actual coverage directories, newline-separated                          | `coverage/`                                                  |
+| `native-command`          | Existing native-renderer Jest coverage command                          | Empty; native job skipped                                    |
+| `native-coverage-files`   | Existing native LCOV path                                               | `coverage/native/lcov.info`                                  |
+| `prepare-command`         | Optional application preparation before shared browser-test execution   | Empty; preparation skipped                                   |
+| `job-timeout-minutes`     | Complete Playwright job ceiling, positive integer at most 360           | `75`                                                         |
+| `suite-timeout-minutes`   | Playwright suite ceiling, positive integer smaller than the job ceiling | `60`                                                         |
+| `report-paths`            | HTML report and test-results directories, newline-separated             | `playwright-report/` and `test-results/`                     |
+| `trusted-oidc`            | Existing working Vercel Trusted Sources configuration                   | `false`                                                      |
+| `production-url`          | Canonical public Production URL                                         | Required                                                     |
 
 The quality workflow accepts the explicit optional `CODECOV_TOKEN` secret. Do not use `secrets: inherit`. Preserve the caller examples’ triggers, concurrency, and permissions: quality includes artifact access and PR comments; Preview includes OIDC permissions; Lighthouse includes deployment access and Pages publication. Do not change account settings during adoption.
 
@@ -78,9 +81,31 @@ The native job runs only when `native-command` is supplied. XState analysis and 
 
 ### Preview Playwright
 
-The workflow matches a successful Vercel Preview deployment to an open PR at the same commit, then runs the application’s browser tests. No matching PR is a legitimate skip; setup and test errors are failures. Available reports are retained without clearing the failing test result.
+The workflow matches a successful Vercel Preview deployment to an open PR at the same commit, then runs the application's browser tests. No matching PR is a legitimate skip; setup and test errors are failures. Available reports are retained without clearing the failing test result.
 
-The application’s Playwright configuration must consume `PLAYWRIGHT_TEST_BASE_URL`. Public Previews need no credential; use `trusted-oidc: false`. For an existing OIDC-protected Preview, use `trusted-oidc: true` and retain the application’s `PLAYWRIGHT_VERCEL_TRUSTED_OIDC_TOKEN` header configuration. Disable credential-bearing traces for that CI run while retaining local trace behavior. Tokens must not appear in logs or diagnostics. Adoption does not introduce a sanitizer or change account settings.
+After frozen dependency installation and browser setup, an optional `prepare-command` runs in `application-directory` with Bash error and pipeline failure handling. It is for application preparation, such as compiling imported workspace packages, and must not start the test suite. A preparation failure prevents the test step from running. Omit preparation where the tests already import executable source.
+
+The shared workflow runs `pnpm exec playwright test` with line and HTML reporters. It retains per-test console progress and produces an HTML report without starting a report server. Browser projects, test discovery, retries, assertions, and per-test timeouts remain in the application's Playwright configuration. Shared reporting and the suite deadline are supplied by the workflow rather than duplicated in each application.
+
+The default complete-job ceiling is 75 minutes; the Playwright suite ceiling is 60 minutes. Both are shared inputs, in positive integer minutes, with the suite shorter than the job. The fifteen-minute difference allows for setup, preparation, and report handling; it does not guarantee report upload if setup consumes the allowance or GitHub terminates the job. A suite timeout remains a failure and can produce a report before the outer job ceiling. Increasing a ceiling is not evidence that a stalled test has been fixed. See [Playwright suite timeouts](https://playwright.dev/docs/test-timeouts#global-timeout) and [reporters](https://playwright.dev/docs/test-reporters).
+
+The application's Playwright configuration must consume `PLAYWRIGHT_TEST_BASE_URL`. Public Previews need no credential; use `trusted-oidc: false`. For an existing OIDC-protected Preview, use `trusted-oidc: true` and retain the application's `PLAYWRIGHT_VERCEL_TRUSTED_OIDC_TOKEN` header configuration. The workflow also exposes `PLAYWRIGHT_VERCEL_TRUSTED_OIDC=true` so applications with token-renewal fixtures retain that behavior. Protected runs force `--trace=off`; unprotected and local runs retain their configured trace behavior. Tokens must not appear in logs or diagnostics. Adoption does not introduce a sanitizer or change account settings.
+
+#### Migrate a full-command caller
+
+The new workflow revision removes `playwright-command`. Update the pinned SHA and its inputs together; older pinned consumers continue using their old contract until explicitly migrated.
+
+For Mapachess, replace its build-and-test command with:
+
+```yaml
+with:
+  trusted-oidc: true
+  prepare-command: pnpm --filter @mapachess/profile... build
+```
+
+For WAYVM, retain `trusted-oidc: true` and remove the command that previously set the authentication flag and `--trace off`; the shared runner now supplies both. Preserve its existing token-renewal fixture. It does not need Mapachess's compiled-workspace preparation.
+
+Review any other caller's command before updating its pin. Callers currently relying on additional flags such as `--pass-with-no-tests` require a separately reviewed compatible input before adoption; silently dropping an option or replacing it with a preparation command is not a migration. Do not add arbitrary shell arguments that can bypass shared execution policy.
 
 ### Production Lighthouse
 

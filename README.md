@@ -5,7 +5,7 @@
 
 Shared GitHub Actions workflows for TypeScript projects built with Next.js or Next.js + Expo.
 
-I built this to keep testing and performance reporting consistent across my portfolio without maintaining separate implementations in every repository. Each application keeps its tests, configuration, and platform-compatible dependencies. Small caller workflows select the commands, report paths, and production URL.
+I built this to keep testing and performance reporting consistent across my portfolio without maintaining separate implementations in every repository. Each application keeps its tests, configuration, and platform-compatible dependencies. Small caller workflows supply application preparation, quality commands, report paths, and the production URL. The shared Playwright workflow owns browser-test execution, progress reporting, and suite and job deadlines.
 
 ## What it runs
 
