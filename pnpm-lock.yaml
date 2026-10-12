@@ -23,6 +23,9 @@ importers:
         specifier: ^6
         version: 6.0.3
     devDependencies:
+      "@playwright/test":
+        specifier: ^1
+        version: 1.64.0
       "@types/node":
         specifier: ^24
         version: 24.13.2
@@ -374,6 +377,14 @@ packages:
       {
         integrity: sha512-Qsm6F5C8xf6ZzQXbQc2+wcpe6sggfs/gvc/ytqSurdvYg3kyW0ECHCqE0CWBKZpqgjVfPNX9c7SCS3r2nEIRGg==,
       }
+
+  "@playwright/test@1.64.0":
+    resolution:
+      {
+        integrity: sha512-oTN9FNYuN6bqQMwiho6jJKLCG2/QOYCixGXuCjRmzOq23eODeukuY2XiAVoVpAECbuezMt1MHQjAiQxK8F+Y+g==,
+      }
+    engines: { node: ">=20" }
+    hasBin: true
 
   "@puppeteer/browsers@3.2.1":
     resolution:
@@ -1895,6 +1906,22 @@ packages:
       }
     engines: { node: ">=12" }
 
+  playwright-core@1.64.0:
+    resolution:
+      {
+        integrity: sha512-T9r+MZkTECl2+oUcZ26YgZzTrYidTsIhYYkJix+6iDOymOb1FB2RLLSOxRGnZGv5DStt+aduIVbt+E8WygXYpg==,
+      }
+    engines: { node: ">=20" }
+    hasBin: true
+
+  playwright@1.64.0:
+    resolution:
+      {
+        integrity: sha512-kVzTnYFYEyQ9RGzBjNCd2+yEqWmVbxl3AHPynv3qQ6JTjv4a+kwRcnqQwIpuP3NnrnIrE/Q6wWAIAvMfIE2/Yg==,
+      }
+    engines: { node: ">=20" }
+    hasBin: true
+
   postcss@8.5.26:
     resolution:
       {
@@ -2688,6 +2715,10 @@ snapshots:
     dependencies:
       legacy-javascript: 0.0.1
       third-party-web: 0.29.2
+
+  "@playwright/test@1.64.0":
+    dependencies:
+      playwright: 1.64.0
 
   "@puppeteer/browsers@3.2.1(yauzl@2.10.0)":
     dependencies:
@@ -3562,6 +3593,12 @@ snapshots:
   picomatch@4.0.4: {}
 
   picomatch@4.0.5: {}
+
+  playwright-core@1.64.0: {}
+
+  playwright@1.64.0:
+    dependencies:
+      playwright-core: 1.64.0
 
   postcss@8.5.26:
     dependencies:
