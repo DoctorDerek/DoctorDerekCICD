@@ -13,6 +13,7 @@ The shared implementation was merged in [DoctorDerekCICD PR #2](https://github.c
 | Reusable workflows                                                                                          | `93e29ba0fcf1d35d8ff0040002816c36d763d966` |
 | Reviewed caller examples                                                                                    | `dbf880ada33888464713046132f2616879ea7925` |
 | Shared Playwright runner contract                                                                           | `0bcbfc0a2e2a8f210e3d445a92615f5701591f17` |
+| Shared Playwright identity renewal and fixture dependency                                                   | `c6f1ae0f8f8f20f28475890b0eb85de581e0cb1a` |
 
 The first four commits record the initial integration. The Playwright contract below replaces that revision's full-command input; the current Playwright examples pin the implementation of the new contract. Existing consumers stay on their selected immutable revision until they explicitly adopt a reviewed update. The workflows pin their shared helper checkout; consumers do not need a separate helper-version input. Retain the full workflow SHA in each caller.
 
