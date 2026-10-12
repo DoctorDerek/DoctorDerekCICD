@@ -5,6 +5,7 @@ export default defineConfig({
   testMatch: "preview.spec.ts",
   workers: 1,
   retries: 0,
+  timeout: Number(process.env.PREVIEW_FIXTURE_TIMEOUT_MS ?? 30_000),
   reporter: "line",
   outputDir: process.env.PREVIEW_FIXTURE_OUTPUT,
   use: {

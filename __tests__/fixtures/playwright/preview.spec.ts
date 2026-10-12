@@ -11,7 +11,11 @@ globalThis.fetch = async () => {
     value: `e30.${Buffer.from(JSON.stringify({ exp: (currentTime + 300_000) / 1000 })).toString("base64url")}.synthetic-signature`,
   })
 }
-const test = createPreviewTest(base, { minimumValidityMs: 90_000 })
+const test = createPreviewTest(base, {
+  minimumValidityMs: Number(
+    process.env.PREVIEW_FIXTURE_MINIMUM_VALIDITY_MS ?? 90_000,
+  ),
+})
 
 if (process.env.PLAYWRIGHT_VERCEL_TRUSTED_OIDC !== "true") {
   test("keeps public and local runs unauthenticated", async ({

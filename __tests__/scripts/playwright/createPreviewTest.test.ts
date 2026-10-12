@@ -36,6 +36,25 @@ it.each([
     status: 1,
     expected: "Protected-preview identity requires an HTTPS Vercel deployment",
   },
+  {
+    name: "rejects an invalid validity reserve before registering fixtures",
+    environment: { PREVIEW_FIXTURE_MINIMUM_VALIDITY_MS: "-1" },
+    status: 1,
+    expected:
+      "Preview identity validity reserve must be finite and nonnegative",
+  },
+  {
+    name: "rejects an unbounded protected test timeout",
+    environment: { PREVIEW_FIXTURE_TIMEOUT_MS: "0" },
+    status: 1,
+    expected: "Protected-preview tests require a finite positive timeout",
+  },
+  {
+    name: "masks renewed identities in GitHub Actions",
+    environment: { GITHUB_ACTIONS: "true" },
+    status: 0,
+    expected: "3 passed",
+  },
 ])(
   "$name",
   ({ environment, status, expected }) => {
@@ -68,6 +87,10 @@ it.each([
       expect(result.stdout).not.toContain("synthetic-request-token")
       expect(result.status, result.stdout + result.stderr).toBe(status)
       expect(result.stdout + result.stderr).toContain(expected)
+      const maskedIdentities = result.stdout.match(/::add-mask::/g) ?? []
+      expect(maskedIdentities).toHaveLength(
+        environment.GITHUB_ACTIONS === "true" ? 2 : 0,
+      )
     } finally {
       rmSync(output, { recursive: true, force: true })
     }
