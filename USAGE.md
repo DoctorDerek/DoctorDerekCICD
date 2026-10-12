@@ -13,6 +13,7 @@ The shared implementation was merged in [DoctorDerekCICD PR #2](https://github.c
 | Reusable workflows                                                                                          | `93e29ba0fcf1d35d8ff0040002816c36d763d966` |
 | Reviewed caller examples                                                                                    | `dbf880ada33888464713046132f2616879ea7925` |
 | Shared Playwright runner contract                                                                           | `0bcbfc0a2e2a8f210e3d445a92615f5701591f17` |
+| Shared Playwright identity renewal and fixture dependency                                                   | `c6f1ae0f8f8f20f28475890b0eb85de581e0cb1a` |
 
 The first four commits record the initial integration. The Playwright contract below replaces that revision's full-command input; the current Playwright examples pin the implementation of the new contract. Existing consumers stay on their selected immutable revision until they explicitly adopt a reviewed update. The workflows pin their shared helper checkout; consumers do not need a separate helper-version input. Retain the full workflow SHA in each caller.
 
@@ -89,7 +90,30 @@ The shared workflow runs `pnpm exec playwright test` with line and HTML reporter
 
 The default complete-job ceiling is 75 minutes; the Playwright suite ceiling is 60 minutes. Both are shared inputs, in positive integer minutes, with the suite shorter than the job. The fifteen-minute difference allows for setup, preparation, and report handling; it does not guarantee report upload if setup consumes the allowance or GitHub terminates the job. A suite timeout remains a failure and can produce a report before the outer job ceiling. Increasing a ceiling is not evidence that a stalled test has been fixed. See [Playwright suite timeouts](https://playwright.dev/docs/test-timeouts#global-timeout) and [reporters](https://playwright.dev/docs/test-reporters).
 
-The application's Playwright configuration must consume `PLAYWRIGHT_TEST_BASE_URL`. Public Previews need no credential; use `trusted-oidc: false`. For an existing OIDC-protected Preview, use `trusted-oidc: true` and retain the application's `PLAYWRIGHT_VERCEL_TRUSTED_OIDC_TOKEN` header configuration. The workflow also exposes `PLAYWRIGHT_VERCEL_TRUSTED_OIDC=true` so applications with token-renewal fixtures retain that behavior. Protected runs force `--trace=off`; unprotected and local runs retain their configured trace behavior. Tokens must not appear in logs or diagnostics. Adoption does not introduce a sanitizer or change account settings.
+The application's Playwright configuration must consume `PLAYWRIGHT_TEST_BASE_URL`. Public Previews need no credential; use `trusted-oidc: false`. For an existing OIDC-protected Preview, use `trusted-oidc: true` and the shared fixture below. The workflow exposes `PLAYWRIGHT_VERCEL_TRUSTED_OIDC=true`; the fixture requests and renews the existing GitHub identity as needed. Protected runs force `--trace=off`; unprotected and local runs retain their configured trace behavior.
+
+#### Canonical protected-preview identity lifecycle
+
+Automatic renewal is shared CI behavior, not a new account-setup decision. Do not ask for a bypass secret or a Vercel protection change to repair an expired existing GitHub identity. This implementation promotes WAYVM's existing expiry-aware fixture into one shared owner. A once-per-suite token is insufficient for a suite that can outlive it.
+
+The existing private `doctorderek-cicd` package exports `doctorderek-cicd/playwright`. Add this repository as a dev-only Git dependency pinned to a reviewed full commit SHA and commit the resolved pnpm lockfile. There is no registry publication, install/build hook, background service or separate test command. The export uses the existing jiti runtime; the caller supplies its own Playwright `test` object, avoiding a second runner instance.
+
+Create the application's small fixture entry, then import its `test` in every protected-preview spec instead of importing `test` directly from Playwright. Continue importing `expect` and Playwright types normally:
+
+```ts
+import { test as base } from "@playwright/test"
+import createPreviewTest from "doctorderek-cicd/playwright"
+
+export const test = createPreviewTest(base, { minimumValidityMs: 90_000 })
+```
+
+The reserve above matches Mapachess's existing longest individual test. Verify it for each consumer. Prefer declaring longer test timeouts before fixtures initialize; when tests extend their timeout inside the body, the reserve must cover that longer duration. This reserve does not increase any test timeout. Unbounded tests or tests longer than a newly issued identity's validity fail explicitly rather than running with stale authentication.
+
+Each worker caches its identity. Before creating a test's browser or API context, the fixture requires enough remaining validity for the greater of its current timeout and the reserve, plus a 30-second clock-skew allowance. It reads the issuer's actual `exp`, not an assumed token lifetime. It uses `ACTIONS_ID_TOKEN_REQUEST_URL` and `ACTIONS_ID_TOKEN_REQUEST_TOKEN` already supplied by GitHub with `id-token: write`; no application secret is introduced. Requests have a bounded timeout, reject redirects and sanitize errors. New tokens are masked before use; report annotations contain only expiry timestamps. Protected traces must be off. The fixture accepts only HTTPS `.vercel.app` preview targets; local/unprotected tests make no identity request and retain existing headers.
+
+Remove static `PLAYWRIGHT_VERCEL_TRUSTED_OIDC_TOKEN` headers from consumer configuration when adopting this workflow revision. That one-shot token output is no longer provided. The workflow pin and fixture dependency pin are explicit review boundaries; changing shared main does not silently migrate applications. Keep application tests, browser projects, timeout policy, data, and Vercel settings unchanged. See [GitHub's OIDC request contract](https://docs.github.com/en/actions/reference/security/oidc) and [Playwright fixture ownership](https://playwright.dev/docs/test-fixtures).
+
+Mapachess is the initial integration pilot. WAYVM already has working renewal and should replace its local resolver/fixture with this owner on reviewed adoption, not maintain a fork or undergo new credential setup. Verify other consumers before selective adoption; do not modify unrelated projects automatically.
 
 #### Migrate a full-command caller
 
@@ -103,7 +127,7 @@ with:
   prepare-command: pnpm --filter @mapachess/profile... build
 ```
 
-For WAYVM, retain `trusted-oidc: true` and remove the command that previously set the authentication flag and `--trace off`; the shared runner now supplies both. Preserve its existing token-renewal fixture. It does not need Mapachess's compiled-workspace preparation.
+For WAYVM, retain `trusted-oidc: true` and remove the command that previously set the authentication flag and `--trace off`; the shared runner supplies both. Adopt the shared fixture above instead of its local renewal implementation. It does not need Mapachess's compiled-workspace preparation.
 
 Review any other caller's command before updating its pin. Callers currently relying on additional flags such as `--pass-with-no-tests` require a separately reviewed compatible input before adoption; silently dropping an option or replacing it with a preparation command is not a migration. Do not add arbitrary shell arguments that can bypass shared execution policy.
 
@@ -143,7 +167,7 @@ pnpm test --coverage
 
 Change a capability here, verify it, and review it. When helper source changes, commit it first and update the helper checkout SHA in the reusable workflows. Then update the complete caller examples to the reviewed workflow SHA. Consumers adopt that revision explicitly; a shared merge does not silently update their automation.
 
-A conforming consumer needs no PR. Differences outside the documented inputs require a specific incompatibility report and approval. Do not fork the implementation locally or add an installer, npm package, service, or release bot.
+A conforming consumer needs no PR. Differences outside the documented inputs require a specific incompatibility report and approval. Do not fork the implementation locally or add an installer, separately published npm package, service, or release bot. The existing repository's dev-only fixture export is consumed by immutable Git revision.
 
 ## License
 

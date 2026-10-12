@@ -154,17 +154,6 @@ jobs:
         env:
           PREPARE_COMMAND: ${{ inputs.prepare-command }}
 
-      - name: Get GitHub OIDC Token
-        if: inputs.trusted-oidc
-        id: github-oidc-token
-        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9
-        with:
-          retries: 3
-          script: |
-            const token = await core.getIDToken();
-            core.setSecret(token);
-            core.setOutput('token', token);
-
       - name: Run Playwright Tests and Capture Summary
         id: playwright
         run: |
@@ -186,7 +175,6 @@ jobs:
           PLAYWRIGHT_HTML_OPEN: never
           PLAYWRIGHT_TEST_BASE_URL: ${{ needs.preview-context.outputs.preview-url }}
           PLAYWRIGHT_VERCEL_TRUSTED_OIDC: ${{ inputs.trusted-oidc }}
-          PLAYWRIGHT_VERCEL_TRUSTED_OIDC_TOKEN: ${{ steps.github-oidc-token.outputs.token }}
 
       - name: Upload Playwright Report
         if: ${{ !cancelled() && steps.playwright.outcome != 'skipped' }}

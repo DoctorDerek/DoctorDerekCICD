@@ -1,7 +1,14 @@
 {
   "name": "doctorderek-cicd",
   "private": true,
+  "version": "0.0.0",
   "type": "module",
+  "exports": {
+    "./playwright": {
+      "types": "./scripts/playwright/createPreviewTest.ts",
+      "default": "./scripts/playwright/createPreviewTest.mjs"
+    }
+  },
   "scripts": {
     "lint": "eslint .",
     "format": "prettier --write .",
@@ -9,16 +16,20 @@
     "test": "vitest run"
   },
   "dependencies": {
-    "chrome-launcher": "^1",
-    "jiti": "^2",
-    "lighthouse": "^13",
-    "typescript": "^6"
+    "jiti": "^2"
+  },
+  "peerDependencies": {
+    "@playwright/test": "^1"
   },
   "devDependencies": {
+    "@playwright/test": "^1",
     "@vitest/coverage-v8": "^4",
     "@types/node": "^24",
+    "chrome-launcher": "^1",
     "eslint": "^9",
+    "lighthouse": "^13",
     "prettier": "^3",
+    "typescript": "^6",
     "typescript-eslint": "^8",
     "vitest": "^4"
   },
