@@ -10,18 +10,9 @@ overrides:
 importers:
   .:
     dependencies:
-      chrome-launcher:
-        specifier: ^1
-        version: 1.2.1
       jiti:
         specifier: ^2
         version: 2.7.0
-      lighthouse:
-        specifier: ^13
-        version: 13.4.1(@opentelemetry/core@2.10.0(@opentelemetry/api@1.9.1))(yauzl@2.10.0)
-      typescript:
-        specifier: ^6
-        version: 6.0.3
     devDependencies:
       "@playwright/test":
         specifier: ^1
@@ -32,12 +23,21 @@ importers:
       "@vitest/coverage-v8":
         specifier: ^4
         version: 4.1.10(vitest@4.1.10)
+      chrome-launcher:
+        specifier: ^1
+        version: 1.2.1
       eslint:
         specifier: ^9
         version: 9.39.4(jiti@2.7.0)
+      lighthouse:
+        specifier: ^13
+        version: 13.4.1(@opentelemetry/core@2.10.0(@opentelemetry/api@1.9.1))(yauzl@2.10.0)
       prettier:
         specifier: ^3
         version: 3.9.6
+      typescript:
+        specifier: ^6
+        version: 6.0.3
       typescript-eslint:
         specifier: ^8
         version: 8.67.0(eslint@9.39.4(jiti@2.7.0))(typescript@6.0.3)
