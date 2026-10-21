@@ -15,8 +15,9 @@ The shared implementation was merged in [DoctorDerekCICD PR #2](https://github.c
 | Shared Playwright runner contract                                                                           | `0bcbfc0a2e2a8f210e3d445a92615f5701591f17` |
 | Shared Playwright identity renewal and fixture dependency                                                   | `c6f1ae0f8f8f20f28475890b0eb85de581e0cb1a` |
 | Shared TypeScript lint coverage helper                                                                      | `a0f8ec00163df9c276c5bf75d4801fa8b2ed82b9` |
+| Quality workflow with TypeScript lint coverage                                                              | `28018031ea1409487e9919b0c62dd58602a3e649` |
 
-The first four commits record the initial integration. The Playwright contract below replaces that revision's full-command input; the current Playwright examples pin the implementation of the new contract. Existing consumers stay on their selected immutable revision until they explicitly adopt a reviewed update. The workflows pin their shared helper checkout; consumers do not need a separate helper-version input. Retain the full workflow SHA in each caller.
+The first four commits record the initial integration. The Playwright contract below replaces that revision's full-command input; the current Playwright examples pin the implementation of the new contract. The quality examples include the TypeScript lint coverage guard. Existing consumers stay on their selected immutable revision until they explicitly adopt a reviewed update. The workflows pin their shared helper checkout; consumers do not need a separate helper-version input. Retain the full workflow SHA in each caller.
 
 ## Adopt the existing callers
 
