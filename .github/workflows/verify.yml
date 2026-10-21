@@ -25,6 +25,7 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm exec prettier --check .
+      - run: node scripts/lint/checkTypeScriptLintCoverage.ts
       - run: pnpm lint
       - run: pnpm typecheck
       - run: pnpm test --coverage

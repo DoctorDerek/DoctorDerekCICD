@@ -9,7 +9,7 @@ I built this to keep testing and performance reporting consistent across my port
 
 ## What it runs
 
-- ESLint reporting and strict TypeScript checks.
+- TypeScript lint-configuration coverage, ESLint reporting, and strict TypeScript checks.
 - Vitest application coverage with Codecov, plus native Jest coverage where the application has native tests.
 - Playwright browser tests against successful Vercel Preview deployments, with reports and PR summaries.
 - Shared Playwright fixtures that renew existing GitHub OIDC identities for protected Previews, without new secrets or account setup.

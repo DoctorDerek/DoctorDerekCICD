@@ -118,6 +118,25 @@ jobs:
         id: dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Checkout Lint Coverage Helper
+        id: lint-helper
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+        with:
+          repository: DoctorDerek/DoctorDerekCICD
+          ref: a0f8ec00163df9c276c5bf75d4801fa8b2ed82b9
+          path: .portfolio-ci-lint
+          persist-credentials: false
+
+      - name: Verify TypeScript Lint Configuration Coverage
+        id: lint-coverage
+        if: ${{ !cancelled() && steps.dependencies.outcome == 'success' && steps.lint-helper.outcome == 'success' }}
+        shell: bash
+        run: |
+          HELPER_DIRECTORY="$(mktemp -d "$RUNNER_TEMP/shared-lint.XXXXXX")"
+          mv "$GITHUB_WORKSPACE/.portfolio-ci-lint" "$HELPER_DIRECTORY/source"
+          echo "LINT_COVERAGE_OUTPUT_FILE=$RUNNER_TEMP/lint-coverage-output.txt" >> "$GITHUB_ENV"
+          node "$HELPER_DIRECTORY/source/scripts/lint/checkTypeScriptLintCoverage.ts" 2>&1 | tee "$RUNNER_TEMP/lint-coverage-output.txt"
+
       - name: Run Lint and Capture Output
         id: lint
         if: ${{ !cancelled() && steps.dependencies.outcome == 'success' }}
@@ -141,14 +160,21 @@ jobs:
         if: ${{ !cancelled() && github.event_name == 'pull_request' }}
         continue-on-error: true
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9
+        env:
+          LINT_COVERAGE_STATUS: ${{ steps.lint-coverage.outcome }}
         with:
           retries: 3
           script: |
             const fs = require('fs');
             const outputPath = process.env.LINT_OUTPUT_FILE;
-            const output = outputPath && fs.existsSync(outputPath)
+            const lintOutput = outputPath && fs.existsSync(outputPath)
               ? fs.readFileSync(outputPath, 'utf8').trim()
               : '';
+            const coveragePath = process.env.LINT_COVERAGE_OUTPUT_FILE;
+            const coverageOutput = coveragePath && fs.existsSync(coveragePath)
+              ? fs.readFileSync(coveragePath, 'utf8').trim()
+              : '';
+            const output = [coverageOutput, lintOutput].filter(Boolean).join('\n\n');
             const exitCode = Number.parseInt(process.env.LINT_EXIT_CODE ?? '', 10);
             const runnerStatus = process.env.LINT_RUNNER_STATUS;
             const header = '### 🧹 ESLint';
@@ -159,7 +185,9 @@ jobs:
               : output;
             let body;
 
-            if (!Number.isInteger(exitCode) || runnerStatus !== 'complete') {
+            if (process.env.LINT_COVERAGE_STATUS !== 'success') {
+              body = `${header}\n\n${qualityPosition}\n\n❌ **TypeScript lint configuration coverage did not pass.**${displayedOutput ? `\n\n\`\`\`text\n${displayedOutput}\n\`\`\`` : ''}`;
+            } else if (!Number.isInteger(exitCode) || runnerStatus !== 'complete') {
               body = `${header}\n\n${qualityPosition}\n\n❌ **ESLint could not run.**${displayedOutput ? `\n\n\`\`\`text\n${displayedOutput}\n\`\`\`` : ''}`;
             } else if (exitCode === 0 && !hasFindings) {
               body = `${header}\n\n${qualityPosition}\n\n✅ **Zero warnings.**`;
@@ -294,8 +322,15 @@ jobs:
 
       - name: Enforce Test and Tooling Results
         if: ${{ !cancelled() }}
+        env:
+          LINT_COVERAGE_STATUS: ${{ steps.lint-coverage.outcome }}
         run: |
           FAILED=0
+
+          if [ "$LINT_COVERAGE_STATUS" != "success" ]; then
+            echo "TypeScript lint configuration coverage did not pass."
+            FAILED=1
+          fi
 
           if ! [[ "$LINT_EXIT_CODE" =~ ^[0-9]+$ ]] || [ "$LINT_RUNNER_STATUS" != "complete" ]; then
             echo "ESLint could not run."

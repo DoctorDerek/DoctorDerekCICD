@@ -14,8 +14,10 @@ The shared implementation was merged in [DoctorDerekCICD PR #2](https://github.c
 | Reviewed caller examples                                                                                    | `dbf880ada33888464713046132f2616879ea7925` |
 | Shared Playwright runner contract                                                                           | `0bcbfc0a2e2a8f210e3d445a92615f5701591f17` |
 | Shared Playwright identity renewal and fixture dependency                                                   | `c6f1ae0f8f8f20f28475890b0eb85de581e0cb1a` |
+| Shared TypeScript lint coverage helper                                                                      | `a0f8ec00163df9c276c5bf75d4801fa8b2ed82b9` |
+| Quality workflow with TypeScript lint coverage                                                              | `28018031ea1409487e9919b0c62dd58602a3e649` |
 
-The first four commits record the initial integration. The Playwright contract below replaces that revision's full-command input; the current Playwright examples pin the implementation of the new contract. Existing consumers stay on their selected immutable revision until they explicitly adopt a reviewed update. The workflows pin their shared helper checkout; consumers do not need a separate helper-version input. Retain the full workflow SHA in each caller.
+The first four commits record the initial integration. The Playwright contract below replaces that revision's full-command input; the current Playwright examples pin the implementation of the new contract. The quality examples include the TypeScript lint coverage guard. Existing consumers stay on their selected immutable revision until they explicitly adopt a reviewed update. The workflows pin their shared helper checkout; consumers do not need a separate helper-version input. Retain the full workflow SHA in each caller.
 
 ## Adopt the existing callers
 
@@ -79,6 +81,28 @@ Enable native testing only where native tests exist. Do not force Turbo aggregat
 ESLint findings are advisory. Setup failures, inability to run tooling, TypeScript errors, and test failures remain blocking. Available coverage is retained after test failures; absent coverage is unavailable evidence, and retained coverage may be partial. Codecov receives the configured application reports.
 
 The native job runs only when `native-command` is supplied. XState analysis and publication remain advisory and inspect the application’s PR history, not the shared repository’s history. Existing PR comments are updated in place. Product state management is unchanged.
+
+#### TypeScript lint configuration coverage
+
+The quality workflow verifies the consumer's effective ESLint configuration before reporting lint success. Parsing TypeScript is not the same as enabling TypeScript rules: a framework preset can parse `.ts` and `.tsx` successfully without applying `typescript-eslint` rules. The application still owns its ESLint configuration, framework scopes, dependencies, and `pnpm lint` command. This check does not install a shared preset or replace that command.
+
+The helper inventories Git-tracked `.ts`, `.tsx`, `.mts`, and `.cts` paths inside `application-directory`, resolves the application's installed ESLint, and checks each path's effective configuration. Missing file matching or zero enabled TypeScript-plugin rules is a blocking tooling failure. Both warning and error severities count as active rules; individual disabled rules remain disabled. The guard recognizes the standard plugin namespace and aliases identified by the TypeScript plugin's metadata. Ordinary lint findings remain advisory under the existing policy.
+
+ESLint does not return an effective configuration for either ignored or unmatched paths. To distinguish them, a second inspector adds only a TypeScript file selector, without adding or changing any rules. A path that remains ignored is explicitly excluded by the configuration; an unmatched source path becomes eligible and is reported as a coverage gap. Explicitly ignored paths are counted in the summary. Untracked private files and decrypted assets are not inventoried. JavaScript-only applications do not acquire a TypeScript requirement.
+
+Keep deliberate exceptions in named ESLint configuration entries, at rule level. Prefer a supported rule option when it expresses the intended behavior; otherwise scope the rule override to the relevant files. Do not add inline disables to retained source code or exclude an entire source tree to silence one rule. Reserve file-level ignores for generated output, dependencies, private artifacts, or other genuinely non-owned inputs. Preserve platform ownership: Next.js/browser rules belong to the web app, not automatically to native or portable packages.
+
+The guard checks configuration coverage, not every possible lint policy. It does not prove that an arbitrary package script actually invokes ESLint on every eligible path, that type-aware linting is enabled, or that the code is bug-free. During adoption, inspect the lint script separately: `eslint src` can omit root configuration and end-to-end tests even when those paths have valid configurations. Keep behavior-focused application config tests where they protect intentional rule options and framework boundaries.
+
+The workflow checks out an immutable helper revision, moves that checkout outside the application into the runner's temporary directory, and runs it using the application's Node runtime and installed ESLint. There is no second dependency installation. The preflight outcome is independent of `pnpm lint`; a coverage failure remains blocking even if the ordinary lint command succeeds. Existing typechecks, tests, coverage uploads, and PR-comment owners remain in place.
+
+For a local pilot, run from the consumer's working directory with Node 24.2 or later and its frozen dependencies installed:
+
+```sh
+node /path/to/DoctorDerekCICD/scripts/lint/checkTypeScriptLintCoverage.ts
+```
+
+The helper uses native Node TypeScript stripping and [the Node entry-point check](https://nodejs.org/api/esm.html#importmetamain); it has no runtime dependency on the shared repository's ESLint or TypeScript installation. Configuration loading still follows the consumer's own ESLint requirements, including `jiti` where its config needs it. See the [ESLint Node API](https://eslint.org/docs/latest/integrate/nodejs-api), [rule configuration](https://eslint.org/docs/latest/use/configure/rules), and [typescript-eslint presets](https://typescript-eslint.io/users/configs/).
 
 ### Preview Playwright
 
