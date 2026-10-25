@@ -1,13 +1,13 @@
-# Automated Maintenance With Minimal Attention
+# MA’AM — Minimal-Attention Automated Maintenance
 
 Author and maintainer: Dr. Derek Austin
 
 - Document type: Functional specification and acceptance contract
 - Section prefix: PU
-- Version: v0.3
+- Version: v0.4
 - Status: Approved specification; implementation and activation are not established
 - Created: Oct. 7, 2026
-- Last updated: Oct. 24, 2026
+- Last updated: Oct. 25, 2026
 - Canonical location: `DoctorDerekCICD/PACKAGE_UPDATER_SPEC.md`
 
 ## PU.1 — Purpose and success
@@ -205,7 +205,7 @@ Keep the updater’s native package table and available release-note links. Add 
 
 The intended note is:
 
-> This candidate follows Automated Maintenance With Minimal Attention. Its package table and diff identify the proposed dependency and toolchain changes; Checks contains the available execution evidence. A failed candidate is deferred, not a review request. If the owner asks an agent to repair it: reload the repository instructions and the referenced specification, inspect the current candidate and base revisions, identify the first real failure, and distinguish setup, policy, compatibility, test, and release failures. Preserve maturity, SDK compatibility, test coverage, and release gates. Propose the smallest repair before editing. Review the actual proposed repair against each of the forty coding pillars in one substantive sentence per pillar, using a specific not-applicable reason where appropriate. Do not invent a passing review or weaken checks. Publish authorized repairs for human review; do not merge them yourself.
+> This candidate follows MA’AM (Minimal-Attention Automated Maintenance). Its package table and diff identify the proposed dependency and toolchain changes; Checks contains the available execution evidence. A failed candidate is deferred, not a review request. If the owner asks an agent to repair it: reload the repository instructions and the referenced specification, inspect the current candidate and base revisions, identify the first real failure, and distinguish setup, policy, compatibility, test, and release failures. Preserve maturity, SDK compatibility, test coverage, and release gates. Propose the smallest repair before editing. Review the actual proposed repair against each of the forty coding pillars in one substantive sentence per pillar, using a specific not-applicable reason where appropriate. Do not invent a passing review or weaken checks. Publish authorized repairs for human review; do not merge them yourself.
 
 At implementation, use a real canonical specification link and record the profile/reference with existing supported PR metadata. Do not paste unresolved placeholders into live PRs. The implementation review must show the actual generated PR body once, including its behavior on an updated candidate.
 

@@ -195,7 +195,7 @@ A conforming consumer needs no PR. Differences outside the documented inputs req
 
 ### Automated maintenance specification
 
-[Automated Maintenance With Minimal Attention](PACKAGE_UPDATER_SPEC.md) defines the approved requirements for opt-in Node.js, pnpm, and dependency maintenance. Publishing this specification does not enable an updater or enroll existing shared-workflow consumers. DoctorDerek.com is the sole initial pilot; implementation and activation require separate approval.
+[MA’AM — Minimal-Attention Automated Maintenance](PACKAGE_UPDATER_SPEC.md) defines the approved requirements for opt-in Node.js, pnpm, and dependency maintenance. Publishing this specification does not enable an updater or enroll existing shared-workflow consumers. DoctorDerek.com is the sole initial pilot; implementation and activation require separate approval.
 
 ## License
 
