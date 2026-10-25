@@ -193,6 +193,10 @@ Change a capability here, verify it, and review it. When helper source changes, 
 
 A conforming consumer needs no PR. Differences outside the documented inputs require a specific incompatibility report and approval. Do not fork the implementation locally or add an installer, separately published npm package, service, or release bot. The existing repository's dev-only fixture export is consumed by immutable Git revision.
 
+### Automated maintenance specification
+
+[Automated Maintenance With Minimal Attention](PACKAGE_UPDATER_SPEC.md) defines the approved requirements for opt-in Node.js, pnpm, and dependency maintenance. Publishing this specification does not enable an updater or enroll existing shared-workflow consumers. DoctorDerek.com is the sole initial pilot; implementation and activation require separate approval.
+
 ## License
 
 Copyright (c) 2026 Dr. Derek Austin, all rights reserved. See [LICENSE.txt](LICENSE.txt).
