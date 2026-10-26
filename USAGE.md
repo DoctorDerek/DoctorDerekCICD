@@ -52,6 +52,32 @@ The quality workflow accepts the explicit optional `CODECOV_TOKEN` secret. Do no
 
 The supported callers install from a repository-root pnpm workspace. `application-directory` changes run-step working directories, not the root package manifest used by setup. Node-version and artifact paths remain workspace-relative. Stop if an application cannot fit these inputs rather than inventing a different setup.
 
+### Clean-checkout typecheck ownership
+
+`typecheck-command` must work after a checkout and frozen dependency installation, before any development server or application build. The shared workflow executes this command; it does not discover frameworks or generate application declarations itself.
+
+Next.js owns `next-env.d.ts`, including its image-module declarations, and generated route types. These ignored files can exist locally while being absent in CI. On supported Next.js versions, run `next typegen` before the web application's existing TypeScript command. Keep this prerequisite in the application's `typecheck` script where one exists, so local and CI execution agree. Preserve its compiler project, flags, and workspace ownership. See the [Next.js typegen contract](https://nextjs.org/docs/app/api-reference/cli/next#next-typegen-options); the command requires Next.js 15.5 or later, so verify the consumer's locked version before adoption.
+
+The [Next.js + Expo caller](examples/nextjs-expo/eslint-vitest-xstate.yml) delegates to Mapachess's existing root `pnpm typecheck`, which runs `turbo run typecheck`. Its Next.js app must merge this entry into `apps/web/package.json`'s existing `scripts`, not replace the manifest:
+
+```json
+{
+  "typecheck": "next typegen && tsc --project tsconfig.json"
+}
+```
+
+That app inherits `noEmit: true` from its root TypeScript configuration. Preserve native and shared packages' own TypeScript commands; they do not need Next.js generation. Do not prepend a second `next typegen` in the workflow when the app already owns it. A root aggregator is sufficient only when it reaches every intended package and its Next.js app performs this preparation. Do not introduce Turbo where the repository uses explicit package commands instead.
+
+The [solo caller](examples/nextjs/eslint-vitest-xstate.yml) and WAYVM command below already perform type generation explicitly before checking the web app. These are conforming; do not create migration PRs merely to relocate working commands. For a new consumer, prefer a complete app-owned script and have CI call that script.
+
+Before publishing a typecheck adoption or repair, verify behavior in an isolated copy of the tracked source, without `next-env.d.ts`, `.next` output, or TypeScript build-info caches. Preserve the working checkout and use the consumer's actual locked toolchain:
+
+1. Confirm that the full consumer command succeeds without a prior build. In a monorepo, verify the intended web, native, and shared checks actually execute; a cached Turbo result is not a cold execution.
+2. Repeat the command to verify generated files do not break subsequent execution.
+3. For a reproduced missing-declaration failure, retain the before/after evidence. Confirm a disposable genuine TypeScript error still fails, then remove the probe. Do not replace this behavior check with workflow-text matching or a new permanent test framework.
+
+`next typegen` loads the application's Next.js configuration in the production build phase. Its existing configuration dependencies must be available; generation does not authorize new secrets, decryption, a full build, or deployment. Keep generated declarations ignored. Do not hand-write permissive image declarations, weaken TypeScript, run Next.js across native/shared packages, or install Next.js in this shared repository to mask an incomplete consumer command. Local isolated verification is not hosted execution; inspect the consumer's next ordinary clean-checkout CI run before claiming hosted success.
+
 ### Initial repository adaptation notes
 
 These notes record the extraction’s inspected layouts, not current adoption status. Recheck repository-owned values before using them.
