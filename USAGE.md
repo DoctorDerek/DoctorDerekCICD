@@ -219,9 +219,70 @@ Change a capability here, verify it, and review it. When helper source changes, 
 
 A conforming consumer needs no PR. Differences outside the documented inputs require a specific incompatibility report and approval. Do not fork the implementation locally or add an installer, separately published npm package, service, or release bot. The existing repository's dev-only fixture export is consumed by immutable Git revision.
 
-### Automated maintenance specification
+### MA’AM: paused, opt-in monthly maintenance
 
-[MA’AM — Minimal-Attention Automated Maintenance](PACKAGE_UPDATER_SPEC.md) defines the approved requirements for opt-in Node.js, pnpm, and dependency maintenance. Publishing this specification does not enable an updater or enroll existing shared-workflow consumers. DoctorDerek.com is the sole initial pilot; implementation and activation require separate approval.
+[MA’AM — Minimal-Attention Automated Maintenance](PACKAGE_UPDATER_SPEC.md) owns the requirements; [maam.json](maam.json) owns the initial Next.js solo policy. This named Renovate preset is disabled by default. Publishing it does not install an app, enroll this shared repository, alter existing CI callers, or activate maintenance. DoctorDerek.com remains the only approved pilot. Expo enrollment requires separate compatibility and native-release proof, not another web pilot.
+
+| Policy                | Behavior                                                                                                                                                                                                                          |
+| --------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Monthly consideration | The 23rd, 02:00–05:00 in `America/Los_Angeles`, including daylight-saving changes. This is a hosted-runner eligibility window, not a promised start time.                                                                         |
+| Scope                 | npm dependencies, development dependencies, lockfile maintenance, `.node-version`, and pnpm’s `packageManager` declaration. No Actions SHA or shared-workflow pin updates.                                                        |
+| Compatibility         | Preserve ordinary caret ranges and narrower zero-major ranges. Defer majors, out-of-range zero-major changes, replacements, rollbacks, pinning, and prereleases. Node and pnpm stay within their current major.                   |
+| Maturity              | Seven complete days with required publication timestamps. Node’s date-only release metadata receives a one-day buffer; pnpm enforces the package graph’s age during resolution and frozen installation.                           |
+| Activity              | One open PR and one branch at a time, with native one-per-hour PR/commit throttles. Automatic creation and refresh stay inside the monthly window. These are not hard monthly build, revision, or cost caps.                      |
+| Merge                 | GitHub platform auto-merge may finish an unchanged eligible candidate after the window, but only after the separately approved required checks and base-freshness enforcement.                                                    |
+| Attention             | No dashboard, assigned reviewers, assignees, or vulnerability-PR bypass. Native PR details and one optional agent-repair note retain evidence without requesting owner action. Email behavior still requires hosted verification. |
+
+Renovate groups package and toolchain proposals together but deliberately creates lockfile maintenance as a separate candidate. The concurrency limits serialize them. A failed or otherwise blocked open candidate can therefore defer all remaining monthly work, including compatible updates. This quiet-deferral behavior was explicitly approved on Oct. 26, 2026; it narrows PU.AC19’s independent-progress requirement for this pilot. No automatic splitting, extra concurrent PR, custom queue, or owner repair deadline is introduced. Production remains unchanged by an unmerged candidate. A new revision must satisfy the schedule and obtain fresh checks; a post-merge release failure remains a release failure.
+
+#### Later pilot setup, not activation
+
+After this policy is reviewed and merged, a separately approved DoctorDerek.com PR may add `renovate.json` referencing this immutable preset revision:
+
+```json
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": [
+    "github>DoctorDerek/DoctorDerekCICD:maam#b630288d345c060c7ccb1e43cb1f193885969629"
+  ],
+  "enabled": false
+}
+```
+
+Keep `enabled: false` until activation is separately authorized. Changing an existing shared-workflow pin does not enroll a repository. Other consumers must not copy this initial pilot profile as an implicit rollout. [Preset references](https://docs.renovatebot.com/config-presets/)
+
+The consumer owns coherent tool declarations and installation settings:
+
+- Use an eligible exact `.node-version`, not a floating `v24`, for reproducible local/CI/updater bootstrap. Keep its major aligned with `engines.node` and the supported hosting line. Candidate Node updates replace that existing owner; do not add another version file.
+- Preserve the exact `packageManager` version and its integrity suffix. Disposable checks verified Node 24.22.0 with pnpm 11.28.6. The pilot’s current pnpm 11.9.0 did not reject every missing-version-timestamp case using the maturity settings alone; upgrade to a reviewed, mature version with demonstrated enforcement before activation. This shared PR changes neither toolchain.
+- Merge the following settings into the existing `pnpm-workspace.yaml`; do not replace its workspaces, overrides, registry configuration, or approved `allowBuilds`. Review any existing version-specific age exception explicitly, and do not add broad exclusions or a new trust-policy mechanism to make a candidate pass.
+
+```yaml
+minimumReleaseAge: 10080
+minimumReleaseAgeStrict: true
+minimumReleaseAgeIgnoreMissingTime: false
+trustLockfile: false
+```
+
+The same configuration must govern updater resolution, local installation, CI, and Vercel frozen installation. Renovate’s release-age filter alone does not cover transitive resolution. Preserve existing integrity and install-script restrictions; the updater skips lifecycle scripts while generating artifacts, but application validation retains its existing approved build behavior. [Release-age boundaries](https://docs.renovatebot.com/key-concepts/minimum-release-age/), [pnpm installation policy](https://pnpm.io/settings/dependency-resolution)
+
+#### Activation evidence gates
+
+Do not activate merely because this preset validates or the shared PR passes:
+
+1. Inspect the hosted app’s actual version/capabilities, selected-repository permission scope, and effective configuration. Enroll only `DoctorDerek/DoctorDerek.com` after approval; preserve unrelated installations. Reconcile competing update writers without changing unrelated workflows.
+2. Obtain approval for necessary GitHub auto-merge and required-check settings. Verify actual current-SHA check identities, including delayed Preview Playwright and the successful Vercel build. Missing, failed, cancelled, or stale applicable checks must block merging. Require an up-to-date base; a necessary rebase waits for the permitted window. Preserve deletion protection and human review of setup/agent-repair PRs. GitHub, not a new merge controller, owns completion outside the window. [Platform auto-merge requirements](https://docs.renovatebot.com/configuration-options/#platformautomerge)
+3. Inspect GitHub/Vercel notification behavior and obtain approval for narrowly scoped changes before creating live candidates. Do not disable billing, account-security, or unrelated failure notifications. Configuration cannot guarantee no email.
+4. Resolve the provider-managed Node patch boundary and the no-change-month production-refresh choice in PU.5.1/PU.6.5. A repository pin does not control Vercel’s patch rollout, and no changed dependency files means no fabricated PR or guaranteed fresh deployment.
+5. Separately authorize a controlled hosted demonstration: one eligible candidate through real checks, bot merge, existing production release and Lighthouse, plus genuine rejection without owner demands. Inspect actual activity and notification outcomes. Retain evidence through existing PR/check/deployment records; no additional reporting service.
+
+#### Verified locally; hosted pilot still pending
+
+The policy was checked with Renovate 44.186.3. Disposable native-tool probes exercised actual website manifest extraction, compatible version selection, deferred boundaries, age rejection, grouping, a blocked candidate consuming the single PR slot, exact Node bootstrap selection, pnpm integrity updates, daylight-saving schedule boundaries, and generated/refreshed PR bodies. Registry/platform fixtures isolated those behaviors; they are not hosted executions.
+
+With Node 24.22.0 and pnpm 11.28.6, real resolution and frozen-install probes selected mature direct/transitive packages and rejected fresh or missing-timestamp packages. A copied website dependency graph also resolved and installed with its existing overrides preserved; lifecycle scripts were suppressed in that disposable fixture. This proves installation compatibility, not application tests, a production build, or a deployment. All probes stayed outside Git; the shared repository’s existing checks remain unchanged.
+
+The PR records exact verification results. App installation, consumer setup, required-check enforcement, actual bot merge/release, notification silence, provider-runtime behavior, and Expo support remain unperformed activation/profile work—not claimed successes.
 
 ## License
 
