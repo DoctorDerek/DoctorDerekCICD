@@ -1,0 +1,74 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "description": [
+    "MA’AM: opt-in monthly maintenance; activation requires separate approval."
+  ],
+  "enabled": false,
+  "enabledManagers": ["npm", "nodenv"],
+  "timezone": "America/Los_Angeles",
+  "schedule": ["* 2-4 23 * *"],
+  "updateNotScheduled": false,
+  "prConcurrentLimit": 1,
+  "branchConcurrentLimit": 1,
+  "prHourlyLimit": 1,
+  "commitHourlyLimit": 1,
+  "dependencyDashboard": false,
+  "assignees": [],
+  "reviewers": [],
+  "assignAutomerge": false,
+  "reviewersFromCodeOwners": false,
+  "semanticCommits": "enabled",
+  "semanticCommitType": "chore",
+  "rangeStrategy": "in-range-only",
+  "ignoreUnstable": true,
+  "minimumReleaseAge": "7 days",
+  "minimumReleaseAgeBehaviour": "timestamp-required",
+  "internalChecksFilter": "strict",
+  "automerge": true,
+  "automergeType": "pr",
+  "automergeStrategy": "merge-commit",
+  "platformAutomerge": true,
+  "ignoreTests": false,
+  "ignoreScripts": true,
+  "rebaseWhen": "behind-base-branch",
+  "vulnerabilityAlerts": { "enabled": false },
+  "osvVulnerabilityAlerts": false,
+  "groupName": "MA’AM routine maintenance",
+  "groupSlug": "maam-routine",
+  "lockFileMaintenance": {
+    "enabled": true,
+    "schedule": ["* 2-4 23 * *"],
+    "groupName": "MA’AM routine maintenance",
+    "groupSlug": "maam-routine"
+  },
+  "packageRules": [
+    {
+      "matchManagers": ["nodenv"],
+      "rangeStrategy": "replace"
+    },
+    {
+      "matchManagers": ["npm"],
+      "matchDepTypes": ["packageManager"],
+      "matchDepNames": ["pnpm"],
+      "rangeStrategy": "replace"
+    },
+    {
+      "matchDatasources": ["node-version"],
+      "minimumReleaseAgeBuffer": "1 day"
+    },
+    {
+      "matchUpdateTypes": [
+        "major",
+        "replacement",
+        "rollback",
+        "pin",
+        "pinDigest"
+      ],
+      "enabled": false
+    }
+  ],
+  "prBodyNotes": [
+    "Profile: Next.js solo. DoctorDerek.com is the only approved pilot. A failed candidate may defer all remaining monthly work; it creates no owner assignment or review deadline.",
+    "This candidate follows [MA’AM (Minimal-Attention Automated Maintenance)](https://github.com/DoctorDerek/DoctorDerekCICD/blob/23433b991b52a108fc06c31d7fbc69c43fb59a77/PACKAGE_UPDATER_SPEC.md). Its package table and diff identify the proposed dependency and toolchain changes; Checks contains the available execution evidence. A failed candidate is deferred, not a review request. If the owner asks an agent to repair it: reload the repository instructions and the referenced specification, inspect the current candidate and base revisions, identify the first real failure, and distinguish setup, policy, compatibility, test, and release failures. Preserve maturity, SDK compatibility, test coverage, and release gates. Propose the smallest repair before editing. Review the actual proposed repair against each of the forty coding pillars in one substantive sentence per pillar, using a specific not-applicable reason where appropriate. Do not invent a passing review or weaken checks. Publish authorized repairs for human review; do not merge them yourself."
+  ]
+}
