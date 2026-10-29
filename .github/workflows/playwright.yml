@@ -100,7 +100,7 @@ jobs:
             core.setOutput('pull-request-number', pullRequest.number.toString());
 
   e2e:
-    name: Playwright E2E Tests
+    name: ${{ needs.preview-context.result == 'success' && needs.preview-context.outputs.pull-request-number != '' && 'Playwright E2E Tests' || 'Playwright E2E Not Applicable' }}
     defaults:
       run:
         working-directory: ${{ inputs.application-directory }}
