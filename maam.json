@@ -6,7 +6,7 @@
   "enabled": false,
   "enabledManagers": ["npm", "nodenv"],
   "timezone": "America/Los_Angeles",
-  "schedule": ["* 2-4 23 * *"],
+  "schedule": ["* 0-7 23 * *"],
   "updateNotScheduled": false,
   "prConcurrentLimit": 1,
   "branchConcurrentLimit": 1,
@@ -37,7 +37,7 @@
   "groupSlug": "maam-routine",
   "lockFileMaintenance": {
     "enabled": true,
-    "schedule": ["* 2-4 23 * *"],
+    "schedule": ["* 0-7 23 * *"],
     "groupName": "MA’AM routine maintenance",
     "groupSlug": "maam-routine"
   },
