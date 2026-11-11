@@ -410,7 +410,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: DoctorDerek/DoctorDerekCICD
-          ref: f6ccad1da06de4dd8492cbf4b7e4a32e97737b57
+          ref: a19fc04f91aca19c0a550d6643b92366bafb481e
           path: .portfolio-ci
           persist-credentials: false
 
