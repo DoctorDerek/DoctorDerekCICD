@@ -25,11 +25,22 @@ const createTemporaryDirectory = () => {
 describe("collectLighthouseReports", () => {
   afterEach(() => {
     vi.restoreAllMocks()
+    vi.unstubAllEnvs()
     launchChromeAdapter.mockReset()
     runLighthouseAdapter.mockReset()
 
     for (const temporaryDirectory of temporaryDirectories.splice(0))
       fs.rmSync(temporaryDirectory, { force: true, recursive: true })
+  })
+
+  it("rejects a missing CLI target before starting Chrome", async () => {
+    vi.stubEnv("LIGHTHOUSE_TARGET_URL", undefined)
+    vi.stubEnv("LIGHTHOUSE_NUMBER_OF_RUNS", undefined)
+
+    await expect(
+      import("@/scripts/lighthouse/collectLighthouseReports.cli"),
+    ).rejects.toThrow("LIGHTHOUSE_TARGET_URL is required.")
+    expect(launchChromeAdapter).not.toHaveBeenCalled()
   })
 
   it("uses the direct Lighthouse and Chrome adapters", async () => {
