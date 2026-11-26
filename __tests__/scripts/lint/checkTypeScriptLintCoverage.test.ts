@@ -2,6 +2,7 @@ import { execFileSync, spawnSync } from "node:child_process"
 import fs from "node:fs"
 import os from "node:os"
 import path from "node:path"
+import { pathToFileURL } from "node:url"
 import { ESLint } from "eslint"
 import { afterEach, describe, expect, it, vi } from "vitest"
 import checkTypeScriptLintCoverage, {
@@ -237,6 +238,26 @@ describe("TypeScript lint configuration coverage", () => {
 })
 
 describe("coverage command", () => {
+  it("can be imported by Node without running the lint command", () => {
+    const result = spawnSync(
+      process.execPath,
+      [
+        "--input-type=module",
+        "--eval",
+        "await import(process.argv[1])",
+        pathToFileURL(cliPath).href,
+      ],
+      {
+        cwd: createApplication('throw new Error("unexpected lint run")'),
+        encoding: "utf8",
+      },
+    )
+
+    expect(result.status).toBe(0)
+    expect(result.stdout).toBe("")
+    expect(result.stderr).toBe("")
+  })
+
   it("returns successful coverage and a concise report", async () => {
     const cwd = createApplication(recommendedConfig)
     const stdout = vi.spyOn(process.stdout, "write").mockReturnValue(true)
@@ -266,6 +287,34 @@ describe("coverage command", () => {
       expect(await runTypeScriptLintCoverage(cwd)).toBe(1)
       expect(stderr).toHaveBeenCalledWith(
         expect.stringContaining("broken config"),
+      )
+    },
+  )
+
+  it.each([
+    { config: recommendedConfig, status: 0, gapCount: 0 },
+    {
+      config: 'export default [{ files: ["**/*.js"] }]',
+      status: 1,
+      gapCount: 2,
+    },
+    { config: 'throw new Error("broken config")', status: 1, gapCount: null },
+  ])(
+    "publishes a completed gap count ($gapCount) with exit $status",
+    ({ config, status, gapCount }) => {
+      const cwd = createApplication(config, ["src/one.ts", "src/two.tsx"])
+      const outputFile = path.join(cwd, "github-output")
+      fs.writeFileSync(outputFile, "existing=kept\n")
+
+      const result = spawnSync(process.execPath, [cliPath, ".", outputFile], {
+        cwd,
+        encoding: "utf8",
+      })
+
+      expect(result.status).toBe(status)
+      expect(fs.readFileSync(outputFile, "utf8")).toBe(
+        "existing=kept\n" +
+          (gapCount === null ? "" : `gap-count=${gapCount}\n`),
       )
     },
   )

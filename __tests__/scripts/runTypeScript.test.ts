@@ -76,10 +76,13 @@ describe("runTypeScript", () => {
     })
   })
 
-  it("rejects TypeScript entries outside the repository", () => {
+  it.each([
+    { reason: "a missing entry", args: [] },
+    { reason: "an entry outside the repository", args: ["../outside.ts"] },
+  ])("rejects $reason", ({ args }) => {
     const result = spawnSync(
       process.execPath,
-      ["scripts/runTypeScript.mjs", "../outside.ts"],
+      ["scripts/runTypeScript.mjs", ...args],
       { cwd: process.cwd(), encoding: "utf8" },
     )
 

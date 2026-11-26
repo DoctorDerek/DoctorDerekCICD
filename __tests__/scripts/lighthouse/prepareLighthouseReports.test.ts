@@ -1,7 +1,7 @@
 import fs from "node:fs"
 import os from "node:os"
 import path from "node:path"
-import { afterEach, describe, expect, it } from "vitest"
+import { afterEach, describe, expect, it, vi } from "vitest"
 import {
   extractLighthouseScores,
   prepareLighthouseReports,
@@ -32,8 +32,30 @@ const createTemporaryDirectory = () => {
   return temporaryDirectory
 }
 
+const writeReports = (
+  resultsDirectory: string,
+  performances: readonly number[],
+) => {
+  const manifest = performances.map((performance, runIndex) => {
+    const jsonPath = path.join(resultsDirectory, `run-${runIndex}.json`)
+    const htmlPath = path.join(resultsDirectory, `run-${runIndex}.html`)
+    fs.writeFileSync(
+      jsonPath,
+      JSON.stringify(createLighthouseResult(performance, 0.99, 0.98, 0.97)),
+    )
+    fs.writeFileSync(htmlPath, `report-${performance}`)
+    return { htmlPath, jsonPath }
+  })
+  fs.writeFileSync(
+    path.join(resultsDirectory, "manifest.json"),
+    JSON.stringify(manifest),
+  )
+}
+
 describe("prepareLighthouseReports", () => {
   afterEach(() => {
+    vi.unstubAllEnvs()
+    vi.restoreAllMocks()
     for (const temporaryDirectory of temporaryDirectories.splice(0))
       fs.rmSync(temporaryDirectory, { force: true, recursive: true })
   })
@@ -41,20 +63,7 @@ describe("prepareLighthouseReports", () => {
   it("selects the stable median performance run and publishes its reports", () => {
     const resultsDirectory = createTemporaryDirectory()
     const publishedDirectory = path.join(resultsDirectory, "published")
-    const manifest = [0.91, 0.72, 0.83].map((performance, runIndex) => {
-      const jsonPath = path.join(resultsDirectory, `run-${runIndex}.json`)
-      const htmlPath = path.join(resultsDirectory, `run-${runIndex}.html`)
-      fs.writeFileSync(
-        jsonPath,
-        JSON.stringify(createLighthouseResult(performance, 0.99, 0.98, 0.97)),
-      )
-      fs.writeFileSync(htmlPath, `report-${performance}`)
-      return { htmlPath, jsonPath }
-    })
-    fs.writeFileSync(
-      path.join(resultsDirectory, "manifest.json"),
-      JSON.stringify(manifest),
-    )
+    writeReports(resultsDirectory, [0.91, 0.72, 0.83])
 
     const scores = prepareLighthouseReports({
       publishedDirectory,
@@ -86,6 +95,54 @@ describe("prepareLighthouseReports", () => {
         ),
       ),
     ).toEqual(scores)
+  })
+
+  it.each([
+    { options: "defaults", results: undefined, publish: false },
+    {
+      options: "only a publishing directory",
+      results: undefined,
+      publish: true,
+    },
+    { options: "only a results directory", results: "audit", publish: false },
+  ])("prepares the CLI report with $options", async ({ results, publish }) => {
+    const directory = createTemporaryDirectory()
+    const resultsDirectory = path.join(
+      directory,
+      results ?? "lighthouse-results",
+    )
+    const publishedDirectory = path.join(directory, "site")
+    fs.mkdirSync(resultsDirectory)
+    writeReports(resultsDirectory, [0.83])
+
+    vi.resetModules()
+    vi.spyOn(process, "cwd").mockReturnValue(directory)
+    vi.stubEnv("LIGHTHOUSE_RESULTS_DIRECTORY", results)
+    vi.stubEnv("LIGHTHOUSE_PUBLISHED_DIRECTORY", publish ? "site" : undefined)
+    await import("@/scripts/lighthouse/prepareLighthouseReports.cli")
+
+    const summary = fs.readFileSync(
+      path.join(resultsDirectory, "lighthouse-summary.json"),
+      "utf8",
+    )
+    expect(JSON.parse(summary)).toEqual({
+      performance: 83,
+      accessibility: 99,
+      bestPractices: 98,
+      seo: 97,
+    })
+    expect(fs.existsSync(publishedDirectory)).toBe(publish)
+    if (publish) {
+      expect(
+        fs.readFileSync(path.join(publishedDirectory, "index.html"), "utf8"),
+      ).toBe("report-0.83")
+      expect(
+        fs.readFileSync(
+          path.join(publishedDirectory, "lighthouse-results.json"),
+          "utf8",
+        ),
+      ).toBe(summary)
+    }
   })
 
   it("rejects malformed manifests, categories, and empty runs", () => {
