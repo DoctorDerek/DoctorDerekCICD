@@ -122,6 +122,8 @@ The guard checks configuration coverage, not every possible lint policy. It does
 
 The workflow checks out an immutable helper revision, moves that checkout outside the application into the runner's temporary directory, and runs it using the application's Node runtime and installed ESLint. There is no second dependency installation. The preflight outcome is independent of `pnpm lint`; a coverage failure remains blocking even if the ordinary lint command succeeds. Existing typechecks, tests, coverage uploads, and PR-comment owners remain in place.
 
+The quality revision pinned by the examples distinguishes a skipped check, an unavailable measurement, and measured file gaps in the PR comment. For measured gaps, the comment gives the number of tracked files without active TypeScript lint rules. The linked lint job shows the diagnostic details, including affected paths and reasons when available.
+
 For a local pilot, run from the consumer's working directory with Node 24.2 or later and its frozen dependencies installed:
 
 ```sh

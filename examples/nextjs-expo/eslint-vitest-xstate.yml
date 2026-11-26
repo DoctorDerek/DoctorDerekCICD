@@ -18,7 +18,7 @@ concurrency:
 
 jobs:
   quality:
-    uses: DoctorDerek/DoctorDerekCICD/.github/workflows/eslint-vitest-xstate.yml@28018031ea1409487e9919b0c62dd58602a3e649
+    uses: DoctorDerek/DoctorDerekCICD/.github/workflows/eslint-vitest-xstate.yml@4dc6730828d083b3508fe9dea429681666fe61e0
     with:
       typecheck-command: pnpm typecheck
       vitest-command: pnpm test:coverage --continue=dependencies-successful
