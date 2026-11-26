@@ -123,7 +123,7 @@ jobs:
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
         with:
           repository: DoctorDerek/DoctorDerekCICD
-          ref: a0f8ec00163df9c276c5bf75d4801fa8b2ed82b9
+          ref: ce7d1f1a2bc28dfe7d7e1de59e384715a5542213
           path: .portfolio-ci-lint
           persist-credentials: false
 
@@ -135,7 +135,7 @@ jobs:
           HELPER_DIRECTORY="$(mktemp -d "$RUNNER_TEMP/shared-lint.XXXXXX")"
           mv "$GITHUB_WORKSPACE/.portfolio-ci-lint" "$HELPER_DIRECTORY/source"
           echo "LINT_COVERAGE_OUTPUT_FILE=$RUNNER_TEMP/lint-coverage-output.txt" >> "$GITHUB_ENV"
-          node "$HELPER_DIRECTORY/source/scripts/lint/checkTypeScriptLintCoverage.ts" 2>&1 | tee "$RUNNER_TEMP/lint-coverage-output.txt"
+          node "$HELPER_DIRECTORY/source/scripts/lint/checkTypeScriptLintCoverage.ts" . "$GITHUB_OUTPUT" 2>&1 | tee "$RUNNER_TEMP/lint-coverage-output.txt"
 
       - name: Run Lint and Capture Output
         id: lint
@@ -162,6 +162,8 @@ jobs:
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9
         env:
           LINT_COVERAGE_STATUS: ${{ steps.lint-coverage.outcome }}
+          LINT_COVERAGE_GAP_COUNT: ${{ steps.lint-coverage.outputs.gap-count }}
+          LINT_JOB_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}/job/${{ job.check_run_id }}
         with:
           retries: 3
           script: |
@@ -186,7 +188,16 @@ jobs:
             let body;
 
             if (process.env.LINT_COVERAGE_STATUS !== 'success') {
-              body = `${header}\n\n${qualityPosition}\n\n❌ **TypeScript lint configuration coverage did not pass.**${displayedOutput ? `\n\n\`\`\`text\n${displayedOutput}\n\`\`\`` : ''}`;
+              const gapCount = process.env.LINT_COVERAGE_GAP_COUNT;
+              let message = 'TypeScript lint configuration coverage could not be measured.';
+              if (process.env.LINT_COVERAGE_STATUS === 'skipped') {
+                message = 'The TypeScript lint configuration check was skipped.';
+              } else if (/^[1-9]\d*$/.test(gapCount ?? '')) {
+                message = `No active TypeScript lint rules apply to ${gapCount} tracked ${gapCount === '1' ? 'file' : 'files'}.`;
+              } else if (gapCount === '0') {
+                message = 'Coverage was measured with zero file gaps. The verification step failed.';
+              }
+              body = `${header}\n\n${qualityPosition}\n\n❌ **${message}**\n\n[View lint job details](${process.env.LINT_JOB_URL})`;
             } else if (!Number.isInteger(exitCode) || runnerStatus !== 'complete') {
               body = `${header}\n\n${qualityPosition}\n\n❌ **ESLint could not run.**${displayedOutput ? `\n\n\`\`\`text\n${displayedOutput}\n\`\`\`` : ''}`;
             } else if (exitCode === 0 && !hasFindings) {
