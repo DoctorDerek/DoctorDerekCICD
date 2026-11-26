@@ -2,14 +2,12 @@ import { execFileSync } from "node:child_process"
 import fs from "node:fs"
 import os from "node:os"
 import path from "node:path"
-import { afterEach, describe, expect, it } from "vitest"
+import { afterEach, describe, expect, it, vi } from "vitest"
 import { diffMachineTopologies } from "@/scripts/xstate-diff/diffMachineTopologies"
 import {
   normalizeChangedSourcePath,
   readGitMachineComparison,
 } from "@/scripts/xstate-diff/readGitMachineComparison"
-import { renderXStateDiff } from "@/scripts/xstate-diff/renderXStateDiff"
-import { writeXStateDiffArtifacts } from "@/scripts/xstate-diff/writeXStateDiffArtifacts"
 import { XSTATE_DIFF_LIMITS } from "@/scripts/xstate-diff/xstateDiffModel"
 
 const temporaryDirectories: string[] = []
@@ -52,6 +50,8 @@ const initializeRepository = () => {
 
 describe("readGitMachineComparison", () => {
   afterEach(() => {
+    vi.restoreAllMocks()
+    vi.unstubAllEnvs()
     for (const temporaryDirectory of temporaryDirectories.splice(0))
       fs.rmSync(temporaryDirectory, { force: true, recursive: true })
   })
@@ -180,9 +180,12 @@ describe("readGitMachineComparison", () => {
     )
   })
 
-  it("writes deterministic, fixed-name forensic artifacts", () => {
+  it("runs the XState CLI and writes deterministic artifacts in its default directory", async () => {
     const repositoryDirectory = initializeRepository()
-    const outputDirectory = path.join(repositoryDirectory, "artifacts")
+    const outputDirectory = path.join(
+      repositoryDirectory,
+      "xstate-diff-artifacts",
+    )
     const machinePath = path.join(repositoryDirectory, "machine.ts")
     fs.writeFileSync(
       machinePath,
@@ -204,25 +207,13 @@ describe("readGitMachineComparison", () => {
       comparison.headTopology,
       { implementationChanged: comparison.implementationChanged },
     )
-    const renderedDiff = renderXStateDiff({
-      baseSha: comparison.mergeBaseSha,
-      headSha: comparison.headSha,
-      baseTopology: comparison.baseTopology,
-      headTopology: comparison.headTopology,
-      topologyDiff,
-      artifactsUrl:
-        "https://github.com/DoctorDerek/repo/actions/runs/1#artifacts",
-    })
-
-    writeXStateDiffArtifacts({
-      outputDirectory,
-      baseSha: comparison.mergeBaseSha,
-      headSha: comparison.headSha,
-      baseTopology: comparison.baseTopology,
-      headTopology: comparison.headTopology,
-      topologyDiff,
-      renderedDiff,
-    })
+    const runUrl = "https://github.com/DoctorDerek/repo/actions/runs/1"
+    vi.stubEnv("XSTATE_DIFF_BASE_SHA", baseSha)
+    vi.stubEnv("XSTATE_DIFF_HEAD_SHA", headSha)
+    vi.stubEnv("XSTATE_DIFF_ACTIONS_RUN_URL", `${runUrl}/`)
+    vi.stubEnv("XSTATE_DIFF_OUTPUT_DIRECTORY", undefined)
+    vi.spyOn(process, "cwd").mockReturnValue(repositoryDirectory)
+    await import("@/scripts/xstate-diff/xstateDiff.cli")
 
     expect(fs.readdirSync(outputDirectory).sort()).toEqual([
       "accessible-changes.md",
@@ -238,8 +229,11 @@ describe("readGitMachineComparison", () => {
         fs.readFileSync(path.join(outputDirectory, "xstate-diff.json"), "utf8"),
       ),
     ).toEqual(topologyDiff)
-    expect(
-      fs.readFileSync(path.join(outputDirectory, "comment.md"), "utf8"),
-    ).toContain("1 state added")
+    const comment = fs.readFileSync(
+      path.join(outputDirectory, "comment.md"),
+      "utf8",
+    )
+    expect(comment).toContain("1 state added")
+    expect(comment).toContain(`${runUrl}#artifacts`)
   })
 })
