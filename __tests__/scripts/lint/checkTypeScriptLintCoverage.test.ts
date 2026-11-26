@@ -271,6 +271,34 @@ describe("coverage command", () => {
   )
 
   it.each([
+    { config: recommendedConfig, status: 0, gapCount: 0 },
+    {
+      config: 'export default [{ files: ["**/*.js"] }]',
+      status: 1,
+      gapCount: 2,
+    },
+    { config: 'throw new Error("broken config")', status: 1, gapCount: null },
+  ])(
+    "publishes a completed gap count ($gapCount) with exit $status",
+    ({ config, status, gapCount }) => {
+      const cwd = createApplication(config, ["src/one.ts", "src/two.tsx"])
+      const outputFile = path.join(cwd, "github-output")
+      fs.writeFileSync(outputFile, "existing=kept\n")
+
+      const result = spawnSync(process.execPath, [cliPath, ".", outputFile], {
+        cwd,
+        encoding: "utf8",
+      })
+
+      expect(result.status).toBe(status)
+      expect(fs.readFileSync(outputFile, "utf8")).toBe(
+        "existing=kept\n" +
+          (gapCount === null ? "" : `gap-count=${gapCount}\n`),
+      )
+    },
+  )
+
+  it.each([
     { config: recommendedConfig, status: 0 },
     { config: 'export default [{ files: ["**/*.js"] }]', status: 1 },
   ])(

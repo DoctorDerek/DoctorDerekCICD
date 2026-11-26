@@ -1,4 +1,5 @@
 import { execFileSync } from "node:child_process"
+import { appendFileSync } from "node:fs"
 import { createRequire } from "node:module"
 import path from "node:path"
 import type { Linter } from "eslint"
@@ -89,6 +90,7 @@ export default async function checkTypeScriptLintCoverage(
 
 export async function runTypeScriptLintCoverage(
   applicationDirectory: string,
+  githubOutputFile?: string,
 ): Promise<number> {
   try {
     const result = await checkTypeScriptLintCoverage(applicationDirectory)
@@ -97,6 +99,8 @@ export async function runTypeScriptLintCoverage(
     )
     for (const { filePath, reason } of result.gaps)
       process.stderr.write(`${filePath}: ${reason}\n`)
+    if (githubOutputFile)
+      appendFileSync(githubOutputFile, `gap-count=${result.gaps.length}\n`)
     return result.gaps.length > 0 ? 1 : 0
   } catch (error: unknown) {
     process.stderr.write(
@@ -107,4 +111,7 @@ export async function runTypeScriptLintCoverage(
 }
 
 if (import.meta.main)
-  process.exitCode = await runTypeScriptLintCoverage(process.argv[2] ?? ".")
+  process.exitCode = await runTypeScriptLintCoverage(
+    process.argv[2] ?? ".",
+    process.argv[3],
+  )
