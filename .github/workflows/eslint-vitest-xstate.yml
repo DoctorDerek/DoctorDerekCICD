@@ -385,6 +385,7 @@ jobs:
         env:
           NATIVE_COMMAND: ${{ inputs.native-command }}
       - name: Preserve Native Coverage
+        id: native-artifact
         if: ${{ !cancelled() && steps.native.outcome != 'skipped' }}
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
@@ -392,7 +393,33 @@ jobs:
           path: ${{ inputs.native-coverage-files }}
           if-no-files-found: warn
           retention-days: 14
-      - name: Publish Native Coverage to Codecov
+      - name: Summarize Native Coverage
+        if: ${{ !cancelled() && (steps.native.outcome != 'success' || !steps.native-artifact.outputs.artifact-url) }}
+        continue-on-error: true
+        working-directory: ${{ runner.temp }}
+        env:
+          NATIVE_OUTCOME: ${{ steps.native.outcome }}
+          ARTIFACT_OUTCOME: ${{ steps.native-artifact.outcome }}
+          ARTIFACT_URL: ${{ steps.native-artifact.outputs.artifact-url }}
+        run: |
+          case "$NATIVE_OUTCOME" in
+            skipped)
+              echo 'Setup ended before the native command ran.' >> "$GITHUB_STEP_SUMMARY"
+              exit 0
+              ;;
+            success) command_result='The native command passed.' ;;
+            failure) command_result='The native command failed.' ;;
+            *) command_result='The native command outcome is unavailable.' ;;
+          esac
+          if [[ -n "$ARTIFACT_URL" ]]; then
+            evidence="[Download retained coverage]($ARTIFACT_URL). The report may be partial."
+          elif [[ "$ARTIFACT_OUTCOME" == success ]]; then
+            evidence='No coverage file matched the configured artifact path.'
+          else
+            evidence='Coverage retention could not be confirmed. See the artifact step.'
+          fi
+          printf '%s %s\n' "$command_result" "$evidence" >> "$GITHUB_STEP_SUMMARY"
+      - name: Attempt Native Codecov Upload
         if: ${{ !cancelled() && steps.native.outcome != 'skipped' }}
         uses: codecov/codecov-action@fb8b3582c8e4def4969c97caa2f19720cb33a72f # v7.0.0
         with:
