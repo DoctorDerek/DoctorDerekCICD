@@ -104,9 +104,11 @@ Enable native testing only where native tests exist. Do not force Turbo aggregat
 
 ### Quality and XState
 
-ESLint findings are advisory. Setup failures, inability to run tooling, TypeScript errors, and test failures remain blocking. Available coverage is retained after test failures; absent coverage is unavailable evidence, and retained coverage may be partial. Codecov receives the configured application reports.
+ESLint findings are advisory. Setup failures, inability to run tooling, TypeScript errors, and test failures remain blocking. After a test command runs, an uncancelled job attempts to retain its coverage and upload the configured reports to Codecov. Coverage from a failed run may be partial. Check the revision and flag in Codecov to confirm receipt.
 
-The native job runs only when `native-command` is supplied. XState analysis and publication remain advisory and inspect the application’s PR history, not the shared repository’s history. Existing PR comments are updated in place. Product state management is unchanged.
+Omitting `native-command` skips the native job. In an uncancelled native job, the Actions run summary explains when setup prevents the command from running, the command fails, or GitHub returns no artifact link. A failed command can still produce a downloadable report. If no file matches `native-coverage-files`, the artifact step warns.
+
+XState analysis and publication remain advisory and inspect the application’s PR history, not the shared repository’s history. Existing PR comments are updated in place. Product state management is unchanged.
 
 #### TypeScript lint configuration coverage
 
