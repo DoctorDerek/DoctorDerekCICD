@@ -108,7 +108,9 @@ ESLint findings are advisory. Setup failures, inability to run tooling, TypeScri
 
 Omitting `native-command` skips the native job. In an uncancelled native job, the Actions run summary explains when setup prevents the command from running, the command fails, or GitHub returns no artifact link. A failed command can still produce a downloadable report. If no file matches `native-coverage-files`, the artifact step warns.
 
-XState analysis and publication remain advisory and inspect the application’s PR history, not the shared repository’s history. Existing PR comments are updated in place. Product state management is unchanged.
+XState compares the PR head with its merge base to report changes in the application’s state-machine topology. Analysis and comment publication are advisory. The workflow updates its existing XState comment or creates one when needed.
+
+If the report is missing or rejected, the comment links to the run and gives the analysis step’s outcome when available. If the workflow cannot confirm publication, the Actions run summary points to the artifact name. The PR may still show a waiting message or an earlier result.
 
 #### TypeScript lint configuration coverage
 
