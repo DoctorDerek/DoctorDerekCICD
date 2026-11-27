@@ -431,6 +431,8 @@ jobs:
   xstate-analysis:
     name: Analyze XState v5 Topology
     needs: initialize-comments
+    outputs:
+      analysis-outcome: ${{ steps.xstate-analysis.outcome }}
     continue-on-error: true
     if: ${{ !cancelled() && github.event_name == 'pull_request' }}
     runs-on: ubuntu-latest
@@ -508,7 +510,10 @@ jobs:
           path: xstate-diff-artifacts
 
       - name: Publish Stable XState Diff Comment
+        id: xstate-comment
         continue-on-error: true
+        env:
+          XSTATE_ANALYSIS_OUTCOME: ${{ needs.xstate-analysis.outputs.analysis-outcome }}
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9
         with:
           retries: 3
@@ -519,7 +524,13 @@ jobs:
             const commentPath = 'xstate-diff-artifacts/comment.md';
             const maximumCommentBytes = 60_000;
             const runUrl = `${process.env.GITHUB_SERVER_URL}/${process.env.GITHUB_REPOSITORY}/actions/runs/${process.env.GITHUB_RUN_ID}`;
-            const fallbackBody = `${marker}\n${header}\n\n**Architecture visualization**\n\n⚠️ **Static XState analysis is unavailable.**\n\n[Inspect workflow run](${runUrl})`;
+            const reportStatus = {
+              success: 'Static XState analysis completed. Its report is unavailable.',
+              failure: 'Static XState analysis failed. Its diagnostic report is unavailable.',
+              skipped: 'Static XState analysis did not run.',
+              cancelled: 'Static XState analysis was cancelled.',
+            }[process.env.XSTATE_ANALYSIS_OUTCOME] ?? 'The XState report is unavailable for this run.';
+            const fallbackBody = `${marker}\n${header}\n\n**Architecture visualization**\n\n⚠️ **${reportStatus}**\n\n[Inspect workflow run](${runUrl})`;
             let body = fallbackBody;
 
             if (fs.existsSync(commentPath)) {
@@ -561,3 +572,9 @@ jobs:
                 body,
               });
             }
+
+      - name: Report Unconfirmed XState Comment Publication
+        if: ${{ !cancelled() && steps.xstate-comment.outcome == 'failure' }}
+        continue-on-error: true
+        run: |
+          echo 'This run could not confirm that the XState PR comment was published. Check the run artifacts for `xstate-v5-state-machine-diff`.' >> "$GITHUB_STEP_SUMMARY"
