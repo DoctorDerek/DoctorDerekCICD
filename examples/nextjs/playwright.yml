@@ -1,15 +1,38 @@
 name: Playwright E2E Tests
+run-name: >-
+  ${{ github.event_name == 'deployment_status' &&
+    format('{0} deployment {1} ({2})', github.event.deployment.environment, github.event.deployment.id, github.event.deployment_status.state) ||
+    format('Check Preview for PR #{0}', github.event.number) }}
 
 on:
   deployment_status:
+  pull_request:
+    types: [opened, reopened, synchronize]
 
-permissions:
-  contents: read
-  pull-requests: write
-  id-token: write
+concurrency:
+  group: >-
+    ${{ github.workflow }}-${{ github.event.pull_request.head.sha ||
+      (github.event.deployment.environment == 'Preview' && github.event.deployment_status.state == 'success' && github.event.deployment.sha) ||
+      github.run_id }}
+  queue: max
+
+permissions: {}
 
 jobs:
   preview:
-    uses: DoctorDerek/DoctorDerekCICD/.github/workflows/playwright.yml@c6f1ae0f8f8f20f28475890b0eb85de581e0cb1a
+    if: github.event_name == 'deployment_status'
+    permissions:
+      contents: read
+      pull-requests: write
+      id-token: write
+    uses: DoctorDerek/DoctorDerekCICD/.github/workflows/playwright.yml@7fa1cdd0606820b2c31ec6c9ef44be9b6e564e19
     with:
       trusted-oidc: true
+
+  recover:
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+    permissions:
+      actions: write
+      deployments: read
+      pull-requests: read
+    uses: DoctorDerek/DoctorDerekCICD/.github/workflows/recover-playwright.yml@7fa1cdd0606820b2c31ec6c9ef44be9b6e564e19

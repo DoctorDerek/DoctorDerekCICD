@@ -1,0 +1,85 @@
+name: Recover Preview Playwright
+
+on:
+  workflow_call:
+
+permissions:
+  actions: write
+  deployments: read
+  pull-requests: read
+
+jobs:
+  recover:
+    name: Check for a missed Preview run
+    if: github.event_name == 'pull_request' && github.event.pull_request.head.repo.full_name == github.repository
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Resume a skipped deployment check for the current PR head
+        uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3
+        with:
+          script: |
+            const repo = context.repo;
+            const eventPR = context.payload.pull_request;
+            const { data: pr } = await github.rest.pulls.get({
+              ...repo, pull_number: eventPR.number,
+            });
+            if (pr.state !== 'open' || pr.head.sha !== eventPR.head.sha ||
+                pr.head.repo?.id !== context.payload.repository.id) return;
+
+            const deployments = await github.paginate(github.rest.repos.listDeployments, {
+              ...repo, sha: pr.head.sha, environment: 'Preview', per_page: 100,
+            });
+            const deployment = deployments
+              .filter(item => item.creator?.login === 'vercel[bot]')
+              .sort((a, b) => b.created_at.localeCompare(a.created_at) || b.id - a.id)[0];
+            if (!deployment) return;
+
+            const { data: [status] } = await github.rest.repos.listDeploymentStatuses({
+              ...repo, deployment_id: deployment.id, per_page: 1,
+            });
+            if (status?.state !== 'success' || status.creator?.login !== 'vercel[bot]') return;
+
+            const { data: caller } = await github.rest.actions.getWorkflowRun({
+              ...repo, run_id: context.runId,
+            });
+            const runs = await github.paginate(github.rest.actions.listWorkflowRuns, {
+              ...repo, workflow_id: caller.workflow_id, event: 'deployment_status',
+              head_sha: pr.head.sha, per_page: 100,
+            });
+            const title = `Preview deployment ${deployment.id} (success)`;
+            const matches = runs.filter(run => run.display_title === title);
+            let deferred;
+
+            for (const run of matches) {
+              const usedSharedPlaywright = run.referenced_workflows?.some(workflow =>
+                workflow.path === `DoctorDerek/DoctorDerekCICD/.github/workflows/playwright.yml@${workflow.sha}`);
+              if (run.status !== 'completed' || run.conclusion !== 'success' || !usedSharedPlaywright) return;
+              const jobs = await github.paginate(github.rest.actions.listJobsForWorkflowRun, {
+                ...repo, run_id: run.id, filter: 'latest', per_page: 100,
+              });
+              const resolver = jobs.find(job => job.conclusion === 'success' &&
+                job.steps?.some(step => step.name === 'Resolve Preview Deployment and Pull Request' &&
+                  step.conclusion === 'success'));
+              const browserJobs = jobs.filter(job => job.name.split(' / ').at(-1).includes('Playwright E2E'));
+              if (!resolver || browserJobs.length !== 1 || browserJobs[0].conclusion !== 'skipped') return;
+              if (!deferred || run.id > deferred.run.id) deferred = { run, resolver };
+            }
+
+            if (!deferred) return;
+            const { run, resolver } = deferred;
+            if (Date.now() - Date.parse(run.created_at) >= 30 * 24 * 60 * 60 * 1000) {
+              core.setFailed("This skipped run is outside GitHub's 30-day rerun window. Request a fresh Preview for this PR head.");
+              return;
+            }
+
+            try {
+              await github.request('POST /repos/{owner}/{repo}/actions/jobs/{job_id}/rerun', {
+                ...repo, job_id: resolver.id,
+              });
+            } catch (error) {
+              const { data: latest } = await github.rest.actions.getWorkflowRun({ ...repo, run_id: run.id });
+              if (latest.run_attempt > run.run_attempt || latest.status !== 'completed') return;
+              throw error;
+            }
+            await core.summary.addLink('Requested another attempt of the original Preview check', run.html_url).write();

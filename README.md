@@ -20,7 +20,7 @@ Test failures remain failures while available reports are retained for debugging
 
 ## How it fits together
 
-Three reusable workflows own the implementation. Each consumer pins a reviewed commit SHA, so shared changes reach an application through an explicit revision update.
+The shared workflows own quality checks, Preview browser tests and production measurements. A companion workflow can recover a browser check when its Preview was ready before the PR opened. Each consumer pins a reviewed commit SHA, so shared changes reach an application through an explicit revision update.
 
 See the complete caller examples for [Next.js](examples/nextjs/) and [Next.js + Expo](examples/nextjs-expo/), or read [USAGE.md](USAGE.md) for configuration and maintenance.
 
