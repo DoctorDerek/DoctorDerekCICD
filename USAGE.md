@@ -138,7 +138,9 @@ The helper uses native Node TypeScript stripping and [the Node entry-point check
 
 ### Preview Playwright
 
-The workflow matches a successful Vercel Preview deployment to an open PR at the same commit, then runs the application's browser tests. No matching PR is a legitimate skip; setup and test errors are failures. Available reports are retained without clearing the failing test result.
+The browser job runs on a successful Vercel Preview for the current head of an open PR. When the deployment arrives first, the resolver records a skip. The example callers check for that deployment when a same-repository PR opens, reopens, or changes head. If its original browser job skipped, recovery requests another attempt of the original resolver and its dependent browser job. The resolver checks the open PR head again before browser setup. Setup and test errors fail the browser job, and available reports are retained.
+
+Adopt the complete Playwright caller, including its deployment run title, per-commit queue and job permissions. Recovery can identify deployment runs created with that title. The queue gives overlapping PR and deployment events a turn on the same commit. The recovery job reads GitHub metadata and uses `actions: write` to request the retry. The deployment job owns checkout, Preview identity and browser execution. An already attempted suite retains its result. GitHub permits reruns for 30 days after the original run. A skipped run outside that window needs a fresh Preview. [GitHub workflow reruns](https://docs.github.com/en/actions/how-tos/manage-workflow-runs/re-run-workflows-and-jobs)
 
 After frozen dependency installation and browser setup, an optional `prepare-command` runs in `application-directory` with Bash error and pipeline failure handling. It is for application preparation, such as compiling imported workspace packages, and must not start the test suite. A preparation failure prevents the test step from running. Omit preparation where the tests already import executable source.
 
